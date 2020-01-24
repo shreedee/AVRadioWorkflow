@@ -1,0 +1,57 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>netcoreapp2.1</TargetFramework>
+    <TypeScriptToolsVersion>3.1</TypeScriptToolsVersion>
+    <TypeScriptCompileBlocked>true</TypeScriptCompileBlocked>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Remove="ClientApp\components\folderCreator\index.tsx" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="AWSSDK.S3" Version="3.3.110.18" />
+    <PackageReference Include="Microsoft.AspNetCore.App" />
+    <PackageReference Include="Microsoft.AspNetCore.Razor.Design" Version="2.1.2" PrivateAssets="All" />
+    <PackageReference Include="WordPressPCL" Version="1.6.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="ClientApp\generated\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="ClientApp\.\generated\FolderDetailsModel.ts" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <TypeScriptCompile Include="ClientApp\components\folderCreator\index.tsx" />
+  </ItemGroup>
+
+  <Target Name="PublishRunWebpack" AfterTargets="ComputeFilesToPublish">
+    <!-- As part of publishing, ensure the JS resources are freshly built in production mode -->
+    <Exec Command="npm install" />
+    <!--Exec Command="node max_old_space_size=8192  node_modules/webpack/bin/webpack.js config webpack.config.vendor.js env.prod" /-->
+    <Exec Command="node node_modules/webpack/bin/webpack.js --mode=production" />
+
+    <!-- Include the newly-built files in the publish output -->
+    <ItemGroup>
+      <DistFiles Include="wwwroot\dist\**; ClientApp\preRenderDist\**" />
+      <ResolvedFileToPublish Include="@(DistFiles->'%(FullPath)')" Exclude="@(ResolvedFileToPublish)">
+        <RelativePath>%(DistFiles.Identity)</RelativePath>
+        <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+      </ResolvedFileToPublish>
+    </ItemGroup>
+  </Target>
+
+  <Target Name="BeforeClean">
+    <Message Text="Cleaning other files..." />
+    <Exec Command="if exist $(ProjectDir)wwwroot\dist RMDIR $(ProjectDir)wwwroot\dist /S /Q)&#xD;&#xA;(if exist $(ProjectDir)node_modules\.cache RMDIR $(ProjectDir)node_modules\.cache /S /Q)&#xD;&#xA;(if exist $(ProjectDir)ClientApp\preRenderDist RMDIR $(ProjectDir)ClientApp\preRenderDist  /S /Q)" />
+  </Target>
+
+  <Target Name="PreBuild" BeforeTargets="PreBuildEvent">
+    <Exec Command="if $(ConfigurationName) == Debug ( &#xD;&#xA;IF NOT EXIST  $(TargetPath) (&#xD;&#xA;RMDIR $(ProjectDir)wwwroot\dist /S /Q&#xD;&#xA;RMDIR $(ProjectDir)node_modules\.cache /S /Q&#xD;&#xA;RMDIR $(ProjectDir)ClientApp\preRenderDist /S /Q&#xD;&#xA;&#xD;&#xA;)&#xD;&#xA;)&#xD;&#xA;&#xD;&#xA;if $(ConfigurationName) == Release (&#xD;&#xA;(if exist $(ProjectDir)wwwroot\dist RMDIR $(ProjectDir)wwwroot\dist /S /Q)&#xD;&#xA;(if exist $(ProjectDir)node_modules\.cache RMDIR $(ProjectDir)node_modules\.cache /S /Q)&#xD;&#xA;(if exist $(ProjectDir)ClientApp\preRenderDist RMDIR $(ProjectDir)ClientApp\preRenderDist  /S /Q)&#xD;&#xA;&#xD;&#xA;)&#xD;&#xA;" />
+  </Target>
+
+</Project>

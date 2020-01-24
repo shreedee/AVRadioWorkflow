@@ -1,0 +1,14 @@
+{
+  "compilerOptions": {
+    "outDir": "./wwwroot/dist/",
+    "moduleResolution": "node",
+    "sourceMap": true,
+    "noImplicitAny": false,
+    "module": "esnext",
+    "target": "es5",
+    "jsx": "react",
+    "allowJs": true,
+    "lib": [ "es2015", "dom" ],
+    "allowSyntheticDefaultImports": true
+  }
+}
