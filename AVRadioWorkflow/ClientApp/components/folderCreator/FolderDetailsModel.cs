@@ -11,8 +11,14 @@ namespace components.folderCreator
         public string genre { get; set; }
         public string description { get; set; }
         public string language {get;set;}
+
+        [bootCommon.ExportAsOptional]
         public string recordingBy { get; set; }
 
+        [bootCommon.ExportAsOptional]
         public string[] mediaFiles { get; set; }
+
+        [bootCommon.ExportAsOptional]
+        public string savedFolder { get; set; }
     }
 }

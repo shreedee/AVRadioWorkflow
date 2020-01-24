@@ -1,0 +1,23 @@
+version: '3'
+
+services:
+
+# https://raw.githubusercontent.com/minio/minio/master/docs/orchestration/docker-compose/docker-compose.yaml
+# for dot net sdk compatible https://github.com/minio/cookbook/blob/master/docs/aws-sdk-for-dotnet-with-minio.md
+  minio:
+    image: minio/minio
+    ports:
+      - 9002:9000
+    volumes:
+      - C:\tmp\avWorkflowdata:/data
+    environment:
+      MINIO_ACCESS_KEY: DCFO7M7ZJR4Q681U2DUH
+      MINIO_SECRET_KEY: PatXGqpsPyqvgpMd+1w+S3mD6HMiq8mfTxPz8jbD
+      MINIO_REGION: us-east-1
+      MINIO_HTTP_TRACE: /logs.txt
+    command: server /data
+    networks:
+      - backend   
+ 
+networks:
+  backend:

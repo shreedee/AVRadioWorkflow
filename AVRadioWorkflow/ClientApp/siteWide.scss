@@ -6,3 +6,13 @@ body {
     font-family: $fontFamily;
 }
 
+.mainContent {
+    margin-top: 10px;
+}
+
+.react-datepicker__input-container {
+    input {
+        height: 38px;
+        //width: 338px;
+    }
+}

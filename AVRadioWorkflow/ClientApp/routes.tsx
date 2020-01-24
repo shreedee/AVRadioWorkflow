@@ -29,9 +29,9 @@ const routes = <Layout>
 
         <Route path='/myorders/:venueId' component={MyOrdersView} />
 
-        <Route path='/kitchen/:standId' component={PrepareFoodView} />
+        <Route path='/kitchen/:standId' component={PrepareFoodView} />*/}
 
-        <Route path='/runner' component={RunnerView} />*/}
+        <Route path='/publish' component={BadRoute} />
 
         <Route path='/foldercreator' component={FolderCreator} />
 

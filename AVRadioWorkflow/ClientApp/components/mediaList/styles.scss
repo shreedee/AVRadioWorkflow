@@ -1,0 +1,11 @@
+﻿@import '../../variables.scss';
+
+.mediaList {
+    .theList {
+        min-height: 200px;
+    }
+
+    .hasDrag {
+        background-color: $gray-lighter;
+    }
+}
