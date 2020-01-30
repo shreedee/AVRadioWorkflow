@@ -18,7 +18,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <None Remove="ClientApp\components\folderCreator\index.tsx" />
+    <None Remove="ClientApp\components\folderCreator\newFolder.tsx" />
+    <None Remove="ClientApp\components\folderCreator\publiMe.tsx" />
     <None Remove="ClientApp\components\folderCreator\reducer.ts" />
     <None Remove="ClientApp\components\mediaList\index.tsx" />
     <None Remove="ClientApp\components\mediaList\reducer.ts" />
@@ -37,15 +38,22 @@
   </ItemGroup>
 
   <ItemGroup>
+    <None Include="ClientApp\.\generated\ArticleModel.ts" />
+    <None Include="ClientApp\.\generated\AuViFileModel.ts" />
     <None Include="ClientApp\.\generated\CreateOptionModel.ts" />
     <None Include="ClientApp\.\generated\DirectUploadModel.ts" />
     <None Include="ClientApp\.\generated\ErrorViewModel.ts" />
     <None Include="ClientApp\.\generated\FolderDetailsModel.ts" />
+    <None Include="ClientApp\.\generated\ImageFileModel.ts" />
+    <None Include="ClientApp\.\generated\MediaFileBaseModel.ts" />
+    <None Include="ClientApp\.\generated\OtherFileModel.ts" />
+    <None Include="ClientApp\.\generated\PublishDetailsModel.ts" />
     <None Include="ClientApp\.\generated\UploadConfigModel.ts" />
   </ItemGroup>
 
   <ItemGroup>
-    <TypeScriptCompile Include="ClientApp\components\folderCreator\index.tsx" />
+    <TypeScriptCompile Include="ClientApp\components\folderCreator\newFolder.tsx" />
+    <TypeScriptCompile Include="ClientApp\components\folderCreator\publiMe.tsx" />
     <TypeScriptCompile Include="ClientApp\components\folderCreator\reducer.ts" />
     <TypeScriptCompile Include="ClientApp\components\mediaList\index.tsx" />
     <TypeScriptCompile Include="ClientApp\components\mediaList\reducer.ts" />

@@ -12,7 +12,7 @@ const BadRoute = () => <h2 className="text-danger text-center">nothing found</h2
 const FolderCreator = () => <SplitPoint
     prompt="Loading folderCreator ..."
     loader={(resolve) => {
-        import(/* webpackChunkName: "folderCreator" */'./components/folderCreator').then(comp => resolve(comp.default));
+        import(/* webpackChunkName: "folderCreator" */'./components/folderCreator/newFolder').then(comp => resolve(comp.default));
     }} />
 
 
@@ -31,7 +31,7 @@ const routes = <Layout>
 
         <Route path='/kitchen/:standId' component={PrepareFoodView} />*/}
 
-        <Route path='/publish' component={BadRoute} />
+        <Route path='/publiMe' component={BadRoute} />
 
         <Route path='/foldercreator' component={FolderCreator} />
 

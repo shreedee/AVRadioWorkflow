@@ -5,6 +5,10 @@ using System.Threading.Tasks;
 
 namespace components.folderCreator
 {
+    /// <summary>
+    /// This should actually be called a publication details model. 
+    /// name is for historical FOlderCreator -> publiMe model
+    /// </summary>
     public class FolderDetailsModel
     {
         public DateTime recordingDate { get; set; }
@@ -16,9 +20,10 @@ namespace components.folderCreator
         public string recordingBy { get; set; }
 
         [bootCommon.ExportAsOptional]
-        public string[] mediaFiles { get; set; }
+        public string savedFolder { get; set; }
 
         [bootCommon.ExportAsOptional]
-        public string savedFolder { get; set; }
+        public PublishDetailsModel publishDetails { get; set; }
+
     }
 }

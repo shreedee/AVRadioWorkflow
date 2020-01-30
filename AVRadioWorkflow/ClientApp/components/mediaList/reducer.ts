@@ -10,6 +10,7 @@ import * as sha256 from 'js-sha256';
 import * as Evaporate from '../../../pullRequest/evaporateJS';
 
 import { DirectUploadModel } from '../../generated/DirectUploadModel';
+import { MediaFileBaseModel } from '../../generated/MediaFileBaseModel'
 
 import * as _ from 'lodash';
 
@@ -17,6 +18,12 @@ export interface IMediaFilesState {
     readonly fileList: { [galleyId: string]: File[] };
     readonly hasDragOver: { [galleyId: string]: boolean };
 };
+
+
+export type SavedMediaProps = {
+    mediaFiles: MediaFileBaseModel[];
+    filesystemLink: string;
+}
 
 type myActions = {
     updateFiles: (galleyId: string, images: File[], remove?: boolean) => { galleyId: string, images: File[], remove?: boolean };
@@ -91,12 +98,14 @@ class galleryReducer extends ReducerBase<IMediaFilesState, myActions>{
         };
     }
 
-    finalizeFilesAsync(galleyId: string, folderName:string) {
+     finalizeFilesAsync(galleyId: string, folderName:string) {
         const _mine = this;
         return async (dispatch, getState) => {
 
             let uploadWaitBox: string = null;
-            let donefileNames: string[] = null;
+            let mediaFiles: MediaFileBaseModel[] = null;
+
+            let filesystemLink: string = null;
 
             const waiter = dispatch(ensureWaitBox().InitWait('uploading files', (async () => {
 
@@ -109,21 +118,25 @@ class galleryReducer extends ReducerBase<IMediaFilesState, myActions>{
                 if (filesUnOrdered.length > 50)
                     throw 'max 50 files at a time';
 
-                donefileNames = await Promise.all(filesUnOrdered.map(async (file, i) => {
+                mediaFiles = await Promise.all(filesUnOrdered.map(async (file, i) => {
 
                     if (file.size > 1024 * 1024 * 100) {
                         throw 'max file size is 100 MB';
                     }
 
+                    
+                    let fileName = file.name.replace(/ /g, "_");
 
-                    const subfolder=( file['type'].split('/')[0] === 'image')?'Images':'Original';
+                    const url = `/api/media/newImageId?fileType=${encodeURIComponent(file['type'])}`
+                        + `&fileName=${encodeURIComponent(fileName)}`
+                        + `&folderpath=${encodeURIComponent(folderName)}`;
+                        
+                    const uploadData = await ((await checkFetchError(await fetch(url))).json() as Promise<DirectUploadModel>);    
 
-                    const fullFilename = `${folderName}/${subfolder}/${file.name}`;
+                    //we will set this few times no isses
+                    filesystemLink = `${uploadData.config.filesystemLink}/${folderName}`;
 
-                    const url = `/api/media/newImageId?fullPath=${encodeURIComponent(fullFilename)}`;
-                    const uploadConfig = await ((await checkFetchError(await fetch(url))).json() as Promise<DirectUploadModel>);    
-
-                    const uploader = await Evaporate.create(_.assign(uploadConfig.config, {
+                    const uploader = await Evaporate.create(_.assign(uploadData.config, {
 
                         customAuthMethod: async (signParams, signHeaders, stringToSign, signatureDateTime, canonicalRequest) => {
 
@@ -144,7 +157,7 @@ class galleryReducer extends ReducerBase<IMediaFilesState, myActions>{
 
                     await uploader.add({
                         file: file,
-                        name: uploadConfig.keyForDirectUpload,
+                        name: uploadData.keyForDirectUpload,
                         progress: (percent, stats) => {
                             //console.log('Progress', percent, stats);
                             if (uploadWaitBox) {
@@ -155,7 +168,7 @@ class galleryReducer extends ReducerBase<IMediaFilesState, myActions>{
                                     })), 10);
                             }
                         },
-                        complete: (xhr, awsObjectKey) => console.log('fileUpload s3 Complete!', file.name, uploadConfig.keyForDirectUpload),
+                        complete: (xhr, awsObjectKey) => console.log('fileUpload s3 Complete!', file.name, uploadData.keyForDirectUpload),
                         error: (mssg) => {
 
                             console.error('Error', mssg)
@@ -169,11 +182,11 @@ class galleryReducer extends ReducerBase<IMediaFilesState, myActions>{
                         warn: (mssg) => {
 
                             console.log('Warning', mssg);
-                            uploader.cancel(`${uploadConfig.config.bucket}/${uploadConfig.keyForDirectUpload}`);
+                            uploader.cancel(`${uploadData.config.bucket}/${uploadData.keyForDirectUpload}`);
                         }
                     });
 
-                    return fullFilename;
+                    return uploadData.mediaFile;
 
                 }));
 
@@ -183,7 +196,7 @@ class galleryReducer extends ReducerBase<IMediaFilesState, myActions>{
 
             await waiter.waitPromise;
 
-            return donefileNames;
+            return { mediaFiles, filesystemLink } as SavedMediaProps;
         };
     }
 }

@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Newtonsoft.Json;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -7,10 +8,8 @@ namespace components.mediaList
 {
     public class DirectUploadModel
     {
-        /// <summary>
-        /// id of the new image
-        /// </summary>
-        public string id { get; set; }
+        [JsonConverter(typeof(MediaFileBaseConverter))]
+        public MediaFileBaseModel mediaFile { get; set; }
 
         /// <summary>
         /// the presigned upload URL

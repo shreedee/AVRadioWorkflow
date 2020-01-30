@@ -6,10 +6,11 @@ import * as _ from 'lodash';
 import { FolderDetailsModel } from '../../generated/FolderDetailsModel';
 import { CreateOptionModel } from '../../generated/CreateOptionModel';
 
+
 import { checkFetchError } from '../../bootCommon/asyncLoader';
 
 import ensureWaitBox from '../waitBox/reducer';
-import ensureMedia from '../mediaList/reducer';
+import ensureMedia, { SavedMediaProps } from '../mediaList/reducer';
 
 import moment from 'moment';
 import { setTimeout } from 'timers';
@@ -18,16 +19,17 @@ export interface ICreatorState {
     readonly folderDetails: FolderDetailsModel;
     readonly createOptions: CreateOptionModel;
 
-    readonly doneFolderPath: string;
+    
 };
 
 type myActions = {
     loaddetails: (value: FolderDetailsModel) => FolderDetailsModel;
-    updateDetailsProp: (key: keyof FolderDetailsModel, value: any) => { key: keyof FolderDetailsModel, value: any };
+
+    updateFolderProps: (key: keyof FolderDetailsModel, value: any) => { key: keyof FolderDetailsModel, value: any };
 
     loadOptions: (value: CreateOptionModel) => CreateOptionModel;
 
-    setDonePath: (value?: string) => string;
+    
 }
 
 class creatorReducer extends ReducerBase<ICreatorState, myActions>{
@@ -35,11 +37,11 @@ class creatorReducer extends ReducerBase<ICreatorState, myActions>{
     createActionList() {
         return {
             loaddetails: (value: FolderDetailsModel) => value,
-            updateDetailsProp: (key: keyof FolderDetailsModel, value: any) => ({ key, value }),
+            updateFolderProps: (key: keyof FolderDetailsModel, value: any) => ({ key, value }),
 
             loadOptions: (value: CreateOptionModel) => value,
 
-            setDonePath: (value?: string) => value
+            
 
         };
     }
@@ -50,7 +52,7 @@ class creatorReducer extends ReducerBase<ICreatorState, myActions>{
 
         detailsHandlers[this._myActions.loaddetails.toString()] = (state, action) => action.payload;
 
-        detailsHandlers[this._myActions.updateDetailsProp.toString()] = (state, action) => {
+        detailsHandlers[this._myActions.updateFolderProps.toString()] = (state, action) => {
 
             const newState = _.clone(state || {}) as FolderDetailsModel;
 
@@ -65,12 +67,14 @@ class creatorReducer extends ReducerBase<ICreatorState, myActions>{
         return {
             folderDetails: handleActions(detailsHandlers, null),
             createOptions: handleAction(this._myActions.loadOptions, (state, action) => action.payload, null),
-            doneFolderPath: handleAction(this._myActions.setDonePath, (state, action) => action.payload, null),
+            
         };
 
     }
 
-    saveStuff() {
+     
+
+    createNewFolderAsync() {
         const _mine = this;
         return async (dispatch, getState) => {
             const { folderDetails } = _mine.getCurrentState(getState());
@@ -78,49 +82,44 @@ class creatorReducer extends ReducerBase<ICreatorState, myActions>{
             const { genre, language, recordingDate, recordingBy, description } = folderDetails;
 
             const recDate = moment(recordingDate);
-            const desc_replaced = (description||'').replace(/ /g, "_");
+            //const desc_replaced = (description||'').replace(/ /g, "_");
 
-            const savedFolder = (`${recDate.format('YYYY_MM_DD')}_${genre}_${desc_replaced}_${language}`
+            const savedFolder = (`${recDate.format('YYYY_MM_DD')}_${genre}_${(description || '')}_${language}`
                 + (recordingBy ? ` (${recordingBy})` : ''))
-                .replace(/[|&;$%@"<>()+,]/g, "");
+                .replace(/[|&;$%@"<>()+,]/g, "")
+                .replace(/ /g, "_");
 
             //this shows it's own wait box
-            const mediaFiles = (await dispatch(ensureMedia().finalizeFilesAsync('folderCreator', savedFolder))) as string[];
+            const { mediaFiles, filesystemLink } = (await dispatch(ensureMedia().finalizeFilesAsync('folderCreator', savedFolder))) as SavedMediaProps;
 
             await dispatch(ensureWaitBox().doWaitAsync('saving data', async () => {
 
-                await checkFetchError(await fetch('/api/foldercreator', {
+                await checkFetchError(await fetch('/api/foldercreator/newFolder', {
                     method: 'post',
                     headers: {
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify(_.assign({}, folderDetails, { savedFolder, mediaFiles }))
+                    body: JSON.stringify(_.assign({}, folderDetails, { savedFolder, publishDetails: { mediaFiles } }))
                 }));
 
                 return true;
             }));
 
-            dispatch(_mine._myActions.setDonePath(savedFolder));
-
-            await new Promise(r => setTimeout(r, 1000 * 10));
-
-            dispatch(ensureMedia().clearFiles('folderCreator'));
-            dispatch(_mine.loadStuff());
-            dispatch(_mine._myActions.setDonePath(null));
-
+            return filesystemLink;
         };
     }
 
-    updateDetailsProp = (key: keyof FolderDetailsModel, value: any) => this._myActions.updateDetailsProp(key, value);
+    updateFolderProps = (key: keyof FolderDetailsModel, value: any) => this._myActions.updateFolderProps(key, value);
 
     loadStuff(filename?:string) {
         const _mine = this;
         return (dispatch, getState) => {
             dispatch(ensureWaitBox().doWaitAsync('loading options', async () => {
 
+                dispatch(ensureMedia().clearFiles('folderCreator'));
+
                 const options = await ((await checkFetchError(await fetch('/api/foldercreator/options'))).json() as Promise<CreateOptionModel>);
                 dispatch(_mine._myActions.loadOptions(options));
-
 
                 const details = filename ?
                     await ((await checkFetchError(await fetch(`/api/foldercreator/load?filename=${encodeURIComponent(filename)}`))).json() as Promise<FolderDetailsModel>)

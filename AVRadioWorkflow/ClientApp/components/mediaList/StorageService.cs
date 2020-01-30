@@ -61,8 +61,8 @@ namespace components.mediaList
                 awsRegion = section["region"],
                 aws_key = section["accesskey"],
                 bucket = section["bucket"],
-                aws_url = section["customEndpoint"]
-
+                aws_url = section["customEndpoint"],
+                filesystemLink= section["filesystemLink"]
             };
 
 

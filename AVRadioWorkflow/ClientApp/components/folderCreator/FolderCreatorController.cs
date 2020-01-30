@@ -58,7 +58,7 @@ namespace components.folderCreator
             return JsonConvert.DeserializeObject<FolderDetailsModel>(jsonData);
         }
 
-        [HttpPost]
+        [HttpPost("newFolder")]
         public async Task SaveFolderDetails([FromBody]FolderDetailsModel data)
         {
             if (string.IsNullOrWhiteSpace(data.savedFolder))
@@ -77,7 +77,7 @@ namespace components.folderCreator
 
             stream = new System.IO.MemoryStream(Encoding.ASCII.GetBytes(shortcut));
 
-            await _storage.SaveStream($"{data.savedFolder}/folderCreator.url", stream);
+            await _storage.SaveStream($"{data.savedFolder}/avRadioPublisher.url", stream);
 
         }
                 

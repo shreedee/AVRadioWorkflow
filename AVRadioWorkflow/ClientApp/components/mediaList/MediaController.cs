@@ -43,19 +43,56 @@ namespace components.mediaList
         /// <param name="createSignedURL"></param>
         /// <returns></returns>
         [HttpGet("newImageId")]
-        public DirectUploadModel getNewImageId([FromQuery] string fullPath, [FromQuery] bool createSignedURL = false)
+        public DirectUploadModel getNewImageId([FromQuery] string fileType, [FromQuery] string fileName, [FromQuery] string folderpath, [FromQuery] bool createSignedURL = false)
         {
-            if (string.IsNullOrWhiteSpace(fullPath))
-                throw new ArgumentNullException("fullPath");
+            if (string.IsNullOrWhiteSpace(fileType))
+                throw new ArgumentNullException("fileType");
+
+            if (string.IsNullOrWhiteSpace(fileName))
+                throw new ArgumentNullException("fileName");
+
+            fileName = fileName.Replace(' ', '_');
+
+            if (string.IsNullOrWhiteSpace(folderpath))
+                throw new ArgumentNullException("folderpath");
+
+
+            var mediaSplit = fileType.Split('/');
+            if (mediaSplit.Length != 2)
+                throw new bootCommon.ExceptionWithCode($"fileType : {fileType} is invalid");
+
+            var mediaType = mediaSplit[0];
+
+            MediaFileBaseModel mediafile = null;
+            switch (mediaType)
+            {
+                case "image":
+                    mediafile = new ImageFileModel();
+                    mediafile.fileName = fileName;
+                    break;
+                case "audio":
+                case "video":
+                    mediafile = new AuViFileModel();
+                    mediafile.fileName = $"{folderpath}_{fileName}";
+                    break;
+                default:
+                    mediafile = new OtherFileModel();
+                    mediafile.fileName = fileName;
+                    break;
+            }
+
+            mediafile.path = $"{mediafile.fileType}/{mediafile.fileName}";
 
 
             var ret = new DirectUploadModel
             {
-                id = fullPath,
+                mediaFile = mediafile,
                 config = _storage.uploadConfig
             };
 
-            _logger.LogDebug($"newPageidForUploadAsync: new page {ret.id}");
+            var fullPath = $"{folderpath}/{mediafile.path}";
+
+            _logger.LogDebug($"newPageidForUploadAsync: new page {fullPath}");
 
             if (createSignedURL)
             {
@@ -64,16 +101,16 @@ namespace components.mediaList
                     //we are using minio.. set up 
                     var origin = this.originFromURL("/api/media");
 
-                    ret.keyForDirectUpload = _storage.createPresignedUrl(ret.id, true, origin);
+                    ret.keyForDirectUpload = _storage.createPresignedUrl(fullPath, true, origin);
                 }
                 else
                 {
-                    ret.keyForDirectUpload = _storage.createPresignedUrl(ret.id, true);
+                    ret.keyForDirectUpload = _storage.createPresignedUrl(fullPath, true);
                 }
             }
             else
             {
-                ret.keyForDirectUpload = _storage.keyForDirectUpload(ret.id);
+                ret.keyForDirectUpload = _storage.keyForDirectUpload(fullPath);
             }
 
             return ret;

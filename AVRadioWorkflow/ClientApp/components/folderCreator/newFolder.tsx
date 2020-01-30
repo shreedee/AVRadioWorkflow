@@ -22,34 +22,27 @@ type ComponentProps = RouteComponentProps<{}>;
 
 class FolderCreatorView extends React.PureComponent<ConnectedProps & ComponentProps & { dispatch }, {}>{
     componentDidMount() {
-        const { dispatch, location } = this.props;
-
-        const { filename } = queryString.parse(location && location.search);
-
-        dispatch(ensureCreator().loadStuff(filename as string));
+        const { dispatch} = this.props;
+        dispatch(ensureCreator().loadStuff());
     }
 
     render() {
-        const { createOptions, folderDetails, dispatch, doneFolderPath } = this.props;
+        const { createOptions, folderDetails, dispatch, history } = this.props;
 
 
         return <div className="folderCreator">
-
-            {doneFolderPath && <Alert variant="success">
-                <span>Saved to path <strong>{doneFolderPath}</strong></span>
-            </Alert>
-            }
 
             <Card >
                 <Card.Header>Create a new folder</Card.Header>
                 <Card.Body>
                     <Form
-                        onSubmit={e => {
+                        onSubmit={async e => {
                             e.preventDefault();
-                            dispatch(ensureCreator().saveStuff());
+                            const savedFolder = await dispatch(ensureCreator().createNewFolderAsync());
+                            history.push(`/publiMe?filename=${encodeURIComponent(savedFolder)}`);
                         }}
                     >
-                        <fieldset disabled={!!doneFolderPath}>
+                        <fieldset>
                             <Row>
                                 <Col md >
                                     <Form.Group>
@@ -63,7 +56,7 @@ class FolderCreatorView extends React.PureComponent<ConnectedProps & ComponentPr
                                                 onChange={e => {
 
 
-                                                    return dispatch(ensureCreator().updateDetailsProp('recordingDate', e));
+                                                    return dispatch(ensureCreator().updateFolderProps('recordingDate', e));
                                                 }}
                                             />
                                         </InputGroup>
@@ -78,7 +71,7 @@ class FolderCreatorView extends React.PureComponent<ConnectedProps & ComponentPr
                                             <Form.Control as="select"
                                                 placeholder="choose the genre" required
                                                 value={folderDetails && folderDetails.genre || ''}
-                                                onChange={(e: any) => dispatch(ensureCreator().updateDetailsProp('genre', e.target.value))}
+                                                onChange={(e: any) => dispatch(ensureCreator().updateFolderProps('genre', e.target.value))}
                                             >
                                                 {(createOptions && createOptions.availableGenres || []).map((o, i) => <option key={i}>{o}</option>)}
                                             </Form.Control>
@@ -99,7 +92,7 @@ class FolderCreatorView extends React.PureComponent<ConnectedProps & ComponentPr
                                                 placeholder="choose the language" required
 
                                                 value={folderDetails && folderDetails.language || ''}
-                                                onChange={(e: any) => dispatch(ensureCreator().updateDetailsProp('language', e.target.value))}
+                                                onChange={(e: any) => dispatch(ensureCreator().updateFolderProps('language', e.target.value))}
                                             >
                                                 {(createOptions && createOptions.availableLanguage || []).map((o, i) => <option key={i}>{o}</option>)}
                                             </Form.Control>
@@ -115,7 +108,7 @@ class FolderCreatorView extends React.PureComponent<ConnectedProps & ComponentPr
 
                                             <Form.Control type="text" placeholder="recording engineer's name (optional)"
                                                 value={folderDetails && folderDetails.recordingBy || ''}
-                                                onChange={e => dispatch(ensureCreator().updateDetailsProp('recordingBy', e.target.value))}
+                                                onChange={e => dispatch(ensureCreator().updateFolderProps('recordingBy', e.target.value))}
                                             />
                                         </InputGroup>
                                     </Form.Group>
@@ -133,7 +126,7 @@ class FolderCreatorView extends React.PureComponent<ConnectedProps & ComponentPr
 
                                             <Form.Control type="text" placeholder="description please" required
                                                 value={folderDetails && folderDetails.description || ''}
-                                                onChange={e => dispatch(ensureCreator().updateDetailsProp('description', e.target.value))}
+                                                onChange={e => dispatch(ensureCreator().updateFolderProps('description', e.target.value))}
 
                                             />
                                         </InputGroup>

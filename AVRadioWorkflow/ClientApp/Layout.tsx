@@ -10,8 +10,8 @@ const MainNav: React.SFC<{}> = () => {
         <Navbar.Toggle aria-controls="basic-navbar-nav" />
         <Navbar.Collapse id="basic-navbar-nav">
             <Nav className="mr-auto">
-                <LinkContainer to="/foldercreator"><Nav.Link >Folder Creator</Nav.Link></LinkContainer>
-                <LinkContainer to="/publish"><Nav.Link>Publish</Nav.Link></LinkContainer>
+                <LinkContainer to="/publiMe"><Nav.Link>PubliMe</Nav.Link></LinkContainer>
+                <LinkContainer to="/foldercreator"><Nav.Link >Create new folder</Nav.Link></LinkContainer>
             </Nav>
 
         </Navbar.Collapse>

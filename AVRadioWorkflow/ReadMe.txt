@@ -37,3 +37,17 @@ mc config host add minio http://host.docker.internal:9000 DCFO7M7ZJR4Q681U2DUH P
 mc mb minio/revstorage
 mc policy set download minio/revstorage
 
+
+//want it:
+
+final pics we want 4:3 aspect ratio.
+min size : 800 X 600
+
+
+image,
+original
+media, everything else
+
+in original put mp3, mp4, wav, aiff, mpeg
+
+media: everything else
