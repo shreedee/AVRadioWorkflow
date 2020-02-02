@@ -8,7 +8,6 @@ namespace components.mediaList
 {
     public class DirectUploadModel
     {
-        [JsonConverter(typeof(MediaFileBaseConverter))]
         public MediaFileBaseModel mediaFile { get; set; }
 
         /// <summary>
@@ -17,5 +16,7 @@ namespace components.mediaList
         public string keyForDirectUpload { get; set; }
 
         public UploadConfigModel config { get; set; }
+
+        public string rootFolder { get; set; }
     }
 }

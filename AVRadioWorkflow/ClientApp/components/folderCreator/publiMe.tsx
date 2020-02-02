@@ -1,4 +1,4 @@
-﻿import * as React from 'react';
+﻿import React from 'react';
 
 import { Card, Form, Row, Col, InputGroup, Button, Alert } from 'react-bootstrap';
 
@@ -15,21 +15,184 @@ import MediaList from '../mediaList';
 
 import "./styles.scss";
 
+import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
+import { faTwitter, faYoutube } from '@fortawesome/free-brands-svg-icons';
+
+import * as _ReactQuill from 'react-quill';
+const ReactQuill = _ReactQuill as any;
+
+import 'react-quill/dist/quill.snow.css';
+
+import ToggleButton from 'react-toggle-button';
+
+
 type ConnectedProps = ICreatorState;
 
 type ComponentProps = RouteComponentProps<{}>;
 
 class PubliMeView extends React.PureComponent<ConnectedProps & ComponentProps & { dispatch }, {}>{
-    componentDidMount() {
-        const { dispatch, location } = this.props;
+    async componentDidMount() {
+        const { dispatch, location, history } = this.props;
 
         const { filename } = queryString.parse(location && location.search);
+        if (!filename) {
+            history.push('foldercreator');
+        } else {
 
-        dispatch(ensureCreator().loadStuff(filename as string));
+            //if we fail to load the file go to
+            try {
+                await dispatch(ensureCreator().loadStuff(filename as string));
+            } catch{
+                history.push('foldercreator');
+            }
+
+        }
+
     }
 
     render() {
+
+        const { folderDetails, dispatch, createOptions, externalLink } = this.props;
+        const publishDetails = folderDetails && folderDetails.publishDetails;
+
         return <div className="folderCreator">
+
+            {externalLink && <Alert variant="info">
+                fileSystem link : {externalLink}
+            </Alert>
+            }
+
+            <Row>
+                <Col lg={6}>
+                    <Card>
+                        <Card.Header>Description</Card.Header>
+                        <Card.Body>
+                            <Form.Group>
+                                <InputGroup >
+                                    <InputGroup.Prepend>
+                                        <InputGroup.Text >Title*</InputGroup.Text>
+                                    </InputGroup.Prepend>
+
+                                    <Form.Control type="text" placeholder="Title (required)"
+                                        value={publishDetails && publishDetails.title || ''}
+                                        onChange={e => dispatch(ensureCreator().updatePublishProps('title', e.target.value))}
+                                    />
+
+                                </InputGroup>
+                            </Form.Group>
+                            <Form.Group>
+                                <InputGroup >
+                                    <InputGroup.Prepend>
+                                        <InputGroup.Text ><FontAwesomeIcon icon={faTwitter} /> Subtitle </InputGroup.Text>
+                                    </InputGroup.Prepend>
+
+                                    <Form.Control type="text" placeholder="Subtitle or twitter handle"
+                                        value={publishDetails && publishDetails.twiterTitle || ''}
+                                        onChange={e => dispatch(ensureCreator().updatePublishProps('twiterTitle', e.target.value))}
+                                    />
+
+                                </InputGroup>
+                            </Form.Group>
+
+                            <Form.Group>
+                                <InputGroup >
+                                    <InputGroup.Prepend>
+                                        <InputGroup.Text >Program by</InputGroup.Text>
+                                    </InputGroup.Prepend>
+
+                                    <Form.Control type="text" placeholder="Program was created by"
+                                        value={publishDetails && publishDetails.programBy || ''}
+                                        onChange={e => dispatch(ensureCreator().updatePublishProps('programBy', e.target.value))}
+                                    />
+
+                                </InputGroup>
+                            </Form.Group>
+
+                            <div>
+                                {publishDetails && <ReactQuill
+                                    placeholder="post description"
+                                    value={publishDetails && publishDetails.bodyText || ''}
+                                    onChange={e => dispatch(ensureCreator().updatePublishProps('bodyText', e))}
+                                />
+                                }
+                            </div>
+
+                        </Card.Body>
+                    </Card>
+                </Col>
+                <Col lg={6}>
+                    <MediaList galleryId="folderCreator" imageSaver={files => dispatch(ensureCreator().addToMedia(files))} />
+                </Col>
+            </Row>
+
+            <Row>
+                <Col lg>
+                    <Card>
+                        <Card.Header>Tags</Card.Header>
+                        <Card.Body>
+                            <Row>
+                                <Col md>
+                                    {createOptions && createOptions.availableCategories && createOptions.availableCategories.length > 0 && < Form.Group >
+                                        <InputGroup >
+                                            <InputGroup.Prepend>
+                                                <InputGroup.Text>Category</InputGroup.Text>
+                                            </InputGroup.Prepend>
+                                            <Form.Control as="select"
+                                                placeholder="choose the category" required
+                                                value={publishDetails && publishDetails.category || ''}
+                                                onChange={(e: any) => dispatch(ensureCreator().updatePublishProps('category', e.target.value))}
+                                            >
+                                                <option></option>
+                                                {(createOptions.availableCategories || []).map((o, i) => <option key={i}>{o}</option>)}
+                                            </Form.Control>
+                                        </InputGroup>
+                                    </Form.Group>
+                                    }
+                                </Col>
+                                <Col md>
+                                    <Form.Group>
+                                        <InputGroup >
+                                            <InputGroup.Prepend>
+                                                <InputGroup.Text >Language</InputGroup.Text>
+                                            </InputGroup.Prepend>
+
+                                            <Form.Control type="text"
+                                                value={folderDetails && folderDetails.language || ''}
+                                                readOnly
+                                            />
+
+                                        </InputGroup>
+                                    </Form.Group>
+                                </Col>
+                            </Row>
+                        </Card.Body>
+                    </Card>
+                </Col>
+                <Col lg>
+                    <Card>
+                        <Card.Header>Social media</Card.Header>
+                        <Card.Body>
+                            <Row>
+                                <Col xs="auto">
+                                    <span className="text-muted">You Tube</span>
+                                </Col>
+                                <Col>
+                                    <ToggleButton
+
+                                        thumbIcon={<FontAwesomeIcon icon={faYoutube} />}
+
+                                        value={false}
+                                        onToggle={() => { }}
+                                        disabled={true}
+                                    />
+                                </Col>
+                            </Row>
+                        </Card.Body>
+                    </Card>
+                </Col>
+            </Row>
+
+
         </div>;
     }
 }

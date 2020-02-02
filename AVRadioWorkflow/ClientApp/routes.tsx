@@ -16,6 +16,14 @@ const FolderCreator = () => <SplitPoint
     }} />
 
 
+const PubliMe = () => <SplitPoint
+    prompt="Loading folderCreator ..."
+    loader={(resolve) => {
+        import(/* webpackChunkName: "publiMe" */'./components/folderCreator/publiMe').then(comp => resolve(comp.default));
+    }} />
+
+
+
 const routes = <Layout>
     <Switch>
         
@@ -31,7 +39,7 @@ const routes = <Layout>
 
         <Route path='/kitchen/:standId' component={PrepareFoodView} />*/}
 
-        <Route path='/publiMe' component={BadRoute} />
+        <Route path='/publiMe' component={PubliMe} />
 
         <Route path='/foldercreator' component={FolderCreator} />
 

@@ -15,6 +15,8 @@ using CustomExtensions;
 using System.Security.Cryptography;
 using System.Text;
 using Amazon.S3;
+using System.IO;
+using System.Text.RegularExpressions;
 
 namespace components.mediaList
 {
@@ -22,19 +24,23 @@ namespace components.mediaList
     public class MediaController : Controller
     {
         readonly ILogger _logger;
-
         readonly IStorageService _storage;
+        readonly string _articlesRoot;
         
         public MediaController(
             IStorageService storage,
+            IConfiguration configuration,
             ILogger<MediaController> logger
         )
         {
             _logger = logger;
             _storage = storage;
+            _articlesRoot = configuration["mediaLocations:articles"];
         }
 
         
+        readonly static Regex _filenameRegex = new Regex(@"[^a-zA-Z0-9\.]");
+        readonly static Regex _pathRegex = new Regex(@"[^a-zA-Z0-9/\.]");
 
         /// <summary>
         /// For this controller the client decides whihc path to put this file in 
@@ -51,12 +57,25 @@ namespace components.mediaList
             if (string.IsNullOrWhiteSpace(fileName))
                 throw new ArgumentNullException("fileName");
 
-            fileName = fileName.Replace(' ', '_');
-
             if (string.IsNullOrWhiteSpace(folderpath))
                 throw new ArgumentNullException("folderpath");
 
+            
+            fileName = _filenameRegex.Replace(fileName, "_");
 
+            folderpath = _pathRegex.Replace(folderpath, "_");
+
+            if (!folderpath.StartsWith(_articlesRoot))
+                folderpath = $"{_articlesRoot}/{folderpath}";
+
+            /*
+            fileName = fileName.Replace(' ', '_');
+            fileName = string.Join("_", fileName.Split(Path.GetInvalidFileNameChars()));
+
+            folderpath = folderpath.Replace(' ', '_');
+            folderpath = string.Join("_", folderpath.Split(Path.GetInvalidPathChars()));
+            */
+            
             var mediaSplit = fileType.Split('/');
             if (mediaSplit.Length != 2)
                 throw new bootCommon.ExceptionWithCode($"fileType : {fileType} is invalid");
@@ -87,7 +106,8 @@ namespace components.mediaList
             var ret = new DirectUploadModel
             {
                 mediaFile = mediafile,
-                config = _storage.uploadConfig
+                config = _storage.uploadConfig,
+                rootFolder = folderpath
             };
 
             var fullPath = $"{folderpath}/{mediafile.path}";
@@ -129,6 +149,8 @@ namespace components.mediaList
         {
             return _storage.uploadSignature( datetime, to_sign, canonical_request);
         }
+
+        
 
     }
 }

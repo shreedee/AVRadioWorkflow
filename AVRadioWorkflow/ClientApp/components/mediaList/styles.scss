@@ -1,11 +1,17 @@
 ﻿@import '../../variables.scss';
 
 .mediaList {
-    .theList {
+
+    .dropContainer {
         min-height: 200px;
+        padding: 10px;
     }
 
     .hasDrag {
         background-color: $gray-lighter;
+    }
+
+    .fileDisplay{
+        overflow:auto;
     }
 }

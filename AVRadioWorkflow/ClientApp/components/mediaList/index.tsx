@@ -1,11 +1,12 @@
 ﻿import * as React from 'react';
-import { FormControl, ListGroup, Button, OverlayTrigger, Tooltip, Card  } from 'react-bootstrap';
+import { FormControl, ListGroup, Button, OverlayTrigger, Tooltip, Card, Accordion, Badge } from 'react-bootstrap';
 
 import ensureMedia, { IMediaFilesState } from './reducer';
 
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faFileArchive } from '@fortawesome/free-solid-svg-icons';
 
+import { MediaFileBaseModel } from '../../generated/MediaFileBaseModel';
 
 import * as _ from 'lodash';
 
@@ -13,18 +14,22 @@ import "./styles.scss";
 
 type ComponentProps = {
     galleryId: string;
+    imageSaver?: (files: File[]) => PromiseLike<MediaFileBaseModel[]>;
 };
 
 type ConnectedProps = IMediaFilesState;
 
 let _fileRenderIdCounter = 0;
 
-
-const MediaListView: React.SFC<ComponentProps & ConnectedProps & { dispatch }> = ({ fileList, galleryId, dispatch, hasDragOver }) => {
+const MediaListView: React.SFC<ComponentProps & ConnectedProps & { dispatch }> = ({ objectList, galleryId, dispatch, hasDragOver, selectedObjectType, imageSaver}) => {
     ///the hidden file form Element
     let _fileInputRef = null;
 
-    const files = fileList && fileList[galleryId] || [];
+    const files = objectList && objectList[galleryId] && objectList[galleryId].files || [];
+
+    const mediaParts = objectList && objectList[galleryId] && objectList[galleryId].mediaList || {};
+
+    const validMediaPartKeys = _.filter(_.keys(mediaParts), k => mediaParts[k].length > 0);
 
     const ihaveDrag = hasDragOver && hasDragOver[galleryId];
 
@@ -50,12 +55,14 @@ const MediaListView: React.SFC<ComponentProps & ConnectedProps & { dispatch }> =
             e.stopPropagation();
             e.preventDefault();
 
+            dispatch(ensureMedia().setDragOver(galleryId, false));
+
             if (e.dataTransfer.files)
-                dispatch(ensureMedia().updateFiles(galleryId, [...e.dataTransfer.files]));
+                dispatch(ensureMedia().addRemoveFiles(galleryId, [...e.dataTransfer.files], false, imageSaver));
 
             return false;
         }}
-        >
+    >
         <Card.Header>
             <div className="d-flex">
                 <div className="mr-auto"><strong>List of files</strong></div>
@@ -75,27 +82,65 @@ const MediaListView: React.SFC<ComponentProps & ConnectedProps & { dispatch }> =
             style={{ height: 0, width: 0, opacity: 0, display: 'contents' }} onChange={(e: any) => {
                 e.preventDefault();
                 //the event is of type FIleList we need to convert it to file[]
-                dispatch(ensureMedia().updateFiles(galleryId, [...e.nativeEvent.target.files]));
+                dispatch(ensureMedia().addRemoveFiles(galleryId, [...e.nativeEvent.target.files], false, imageSaver));
             }}
         />
 
-        <ListGroup className={'theList ' + (ihaveDrag?'hasDrag':'')}>
-            {files.map((f, i) => <ListGroup.Item key={i}>
-                <div className="d-flex">
-                    <div className="mr-auto">{f.name}</div>
-                    <div >
-                        <Button title="remove file" variant="danger" size="sm"
-                            onClick={() => dispatch(ensureMedia().updateFiles(galleryId,[f],true))}
-                        >X</Button>
+        <Card.Body className={'dropContainer ' + (ihaveDrag ? 'hasDrag' : '')}>
+
+            <Accordion activeKey={selectedObjectType} >
+                {validMediaPartKeys.map(mp => < Card key = { mp } >
+                    <Card.Header>
+                        <Accordion.Toggle as={Button} variant="link"
+                            eventKey={mediaParts[mp][0].objectType}
+                            onClick={() => dispatch(ensureMedia().selectObjectType(mediaParts[mp][0].objectType))}
+                        >
+                            {mediaParts[mp][0].fileType}
+                        </Accordion.Toggle>
+
+                        <Badge>{mediaParts[mp].length}</Badge>
+
+                    </Card.Header>
+                    <Accordion.Collapse eventKey={mediaParts[mp][0].objectType}>
+                        <Card.Body>
+                            <ListGroup >
+                                {mediaParts[mp].map((f, i) => <ListGroup.Item key={i}>
+
+                                    <div className="d-flex">
+                                        <div className="mr-auto fileDisplay">{f.fileName}</div>
+                                        <div >
+                                            <Button title="remove file" variant="danger" size="sm"
+                                                onClick={() => dispatch(ensureMedia().addRemoveMedia(galleryId, [f], true))}
+                                            >X</Button>
+                                        </div>
+                                    </div>
+
+                                </ListGroup.Item>)}
+                            </ListGroup>
+                        </Card.Body>
+                    </Accordion.Collapse>
+                </Card>)}
+            </Accordion>
+
+            <ListGroup >
+                {files.map((f, i) => <ListGroup.Item key={i}>
+
+                    <div className="d-flex">
+                        <div className="mr-auto">{f.name}</div>
+                        <div >
+                            <Button title="remove file" variant="danger" size="sm"
+                                onClick={() => dispatch(ensureMedia().addRemoveFiles(galleryId, [f], true))}
+                            >X</Button>
+                        </div>
                     </div>
-                </div>
-                
-            </ListGroup.Item>)}
 
-            {files.length == 0 && <ListGroup.Item><span className="text-muted">Drag files here</span></ListGroup.Item>}
-        </ListGroup>
+                </ListGroup.Item>)}
 
-        
+                {files.length == 0 && validMediaPartKeys.length ==0 && < ListGroup.Item > <span className="text-muted">Drag files here</span></ListGroup.Item>}
+            </ListGroup>
+        </Card.Body>
+
+
     </Card >;
 
 };

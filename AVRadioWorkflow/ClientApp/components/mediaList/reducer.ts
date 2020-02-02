@@ -10,25 +10,42 @@ import * as sha256 from 'js-sha256';
 import * as Evaporate from '../../../pullRequest/evaporateJS';
 
 import { DirectUploadModel } from '../../generated/DirectUploadModel';
-import { MediaFileBaseModel } from '../../generated/MediaFileBaseModel'
+import { MediaFileBaseModel } from '../../generated/MediaFileBaseModel';
 
 import * as _ from 'lodash';
 
+type MediaObjects = {
+    //not uploaded file system files
+    files: File[];
+
+    //already uploaded files
+    mediaList: { [mediaType: string]: MediaFileBaseModel[] };
+}
+
 export interface IMediaFilesState {
-    readonly fileList: { [galleyId: string]: File[] };
+    readonly objectList: { [galleyId: string]: MediaObjects};
     readonly hasDragOver: { [galleyId: string]: boolean };
+
+    readonly selectedObjectType: string;
 };
 
 
 export type SavedMediaProps = {
     mediaFiles: MediaFileBaseModel[];
     filesystemLink: string;
+    savedFolder: string;
 }
 
 type myActions = {
-    updateFiles: (galleyId: string, images: File[], remove?: boolean) => { galleyId: string, images: File[], remove?: boolean };
+    addRemoveFiles: (galleyId: string, images: File[], remove?: boolean) => { galleyId: string, images: File[], remove?: boolean };
+
+    addRemoveMedia: (galleyId: string, list: MediaFileBaseModel[], remove?: boolean) => { galleyId: string, list: MediaFileBaseModel[], remove?: boolean };
+
+    clearList: (galleyId: string) => string;
 
     setDragOver: (galleyId: string, value: boolean) => { galleyId: string, value: boolean };
+
+    selectObjectType: (value?: string) => string;
 }
 
 
@@ -49,12 +66,71 @@ function readableBytes(bytes: number) {
 class galleryReducer extends ReducerBase<IMediaFilesState, myActions>{
     createActionList() {
         return {
-            updateFiles: (galleyId: string, images: File[], remove?: boolean) => ({ galleyId, images, remove }),
-            setDragOver: (galleyId: string, value: boolean) => ({ galleyId, value })
+            addRemoveFiles: (galleyId: string, images: File[], remove?: boolean) => ({ galleyId, images, remove }),
+            addRemoveMedia: (galleyId: string, list: MediaFileBaseModel[], remove?: boolean) => ({ galleyId, list, remove }),
+            clearList: (galleyId: string) => galleyId,
+
+            setDragOver: (galleyId: string, value: boolean) => ({ galleyId, value }),
+
+            selectObjectType: (value?: string) => value,
         };
     }
 
     reducers() {
+
+        const listHandlers = {};
+
+        listHandlers[this._myActions.clearList.toString()] = (state, action: { payload: string }) => {
+            const newState = _.clone(state || {}) as { [galleyId: string]: MediaObjects };
+            delete newState[action.payload];
+            return newState;
+        }
+
+
+        listHandlers[this._myActions.addRemoveMedia.toString()] =
+            (state, action: { payload: { galleyId: string, list: MediaFileBaseModel[], remove?: boolean } }) => {
+                const newState = _.clone(state || {}) as { [galleyId: string]: MediaObjects };
+
+                const { remove, galleyId, list } = action.payload;
+
+                let newList = _.flatMap((newState[galleyId] && newState[galleyId].mediaList) || {});
+
+                if (remove) {
+                    newList = _.filter(newList, f => !_.includes(list, f));
+                } else {
+                    newList = _.concat(newList, list);
+                }
+
+                const mediaList = _.reduce(newList, (acc, o) => {
+                    acc[o.objectType] = _.concat(acc[o.objectType] || [], o);
+                    return acc;
+                }, {} as { [mediaType: string]: MediaFileBaseModel[] });
+
+                newState[galleyId] = _.assign({}, newState[galleyId], { mediaList: mediaList });
+
+                return newState;
+            }
+
+
+        listHandlers[this._myActions.addRemoveFiles.toString()] =
+            (state, action: { payload: { galleyId: string, images: File[], remove?: boolean } }) => {
+                const newState = _.clone(state || {}) as { [galleyId: string]: MediaObjects };
+
+                const { remove, galleyId, images } = action.payload;
+
+                let files = (newState[galleyId] && newState[galleyId].files) || [];
+
+                if (remove) {
+                    files = _.filter(files, f => !_.includes(images, f));
+                } else {
+                    files = _.concat(files, images);
+                }
+
+                newState[galleyId] = _.assign({}, newState[galleyId], { files: files });
+
+                return newState;
+        }
+
 
         return {
 
@@ -71,34 +147,34 @@ class galleryReducer extends ReducerBase<IMediaFilesState, myActions>{
 
             }, {}),
 
-            fileList: handleAction(this._myActions.updateFiles, (state, action) => {
-                const newState = _.clone(state || {}) as { [galleyId: string]: File[] };
-                const payload = action.payload as { galleyId: string, images: File[], remove?: boolean };
+            selectedObjectType: handleAction(this._myActions.selectObjectType, (state, action) => action.payload,null),
 
-                if (payload.remove) {
-                    newState[payload.galleyId] = _.filter(newState[payload.galleyId] || [], f => !_.includes(payload.images, f));
-                } else {
-                    newState[payload.galleyId] = _.concat(newState[payload.galleyId] || [], payload.images);
-                }
-                return newState;
-            }, {})
+            objectList: handleActions(listHandlers, {}),
         };
     }
 
     setDragOver = (galleyId: string, value: boolean) => this._myActions.setDragOver(galleyId, value);
 
-    updateFiles = (galleyId: string, images: File[], remove?: boolean) => this._myActions.updateFiles(galleyId, images, remove);
+    addRemoveFiles(galleyId: string, images: File[], remove?: boolean, imageSaver?: (files: File[]) => PromiseLike<MediaFileBaseModel[]>) {
+        return async (dispatch, getState) => {
 
-    clearFiles(galleyId: string) {
-        const _mine = this;
-        return (dispatch, getState) => {
-            const { fileList } = _mine.getCurrentState(getState());
-            const filesUnOrdered = fileList && fileList[galleyId];
-            return dispatch(_mine.updateFiles(galleyId, filesUnOrdered, true));
+            if (!remove && !!imageSaver) {
+                const imageList = await imageSaver(images);
+                dispatch(this._myActions.addRemoveMedia(galleyId, imageList));
+            } else {
+                dispatch(this._myActions.addRemoveFiles(galleyId, images, remove));
+            }
+            
         };
     }
 
-     finalizeFilesAsync(galleyId: string, folderName:string) {
+    addRemoveMedia = (galleyId: string, list: MediaFileBaseModel[], remove?: boolean) => this._myActions.addRemoveMedia(galleyId, list, remove);
+
+    selectObjectType = (value?: string) => this._myActions.selectObjectType(value);
+
+    clearFiles = (galleyId: string) => this._myActions.clearList(galleyId);
+
+    finalizeFilesAsync(galleyId: string, folderName: string, filesUnOrdered?:File[]) {
         const _mine = this;
         return async (dispatch, getState) => {
 
@@ -106,11 +182,15 @@ class galleryReducer extends ReducerBase<IMediaFilesState, myActions>{
             let mediaFiles: MediaFileBaseModel[] = null;
 
             let filesystemLink: string = null;
+            let savedFolder: string = null;
 
             const waiter = dispatch(ensureWaitBox().InitWait('uploading files', (async () => {
 
-                const { fileList } = _mine.getCurrentState(getState());
-                const filesUnOrdered = fileList && fileList[galleyId];
+                if (!filesUnOrdered) {
+                    const { objectList } = _mine.getCurrentState(getState());
+
+                    filesUnOrdered = objectList && objectList[galleyId] && objectList[galleyId].files;
+                }
 
                 if (!filesUnOrdered || filesUnOrdered.length < 1)
                     throw 'no files to upload';
@@ -125,16 +205,17 @@ class galleryReducer extends ReducerBase<IMediaFilesState, myActions>{
                     }
 
                     
-                    let fileName = file.name.replace(/ /g, "_");
+                    //let fileName = file.name.replace(/ /g, "_");
 
                     const url = `/api/media/newImageId?fileType=${encodeURIComponent(file['type'])}`
-                        + `&fileName=${encodeURIComponent(fileName)}`
+                        + `&fileName=${encodeURIComponent(file.name)}`
                         + `&folderpath=${encodeURIComponent(folderName)}`;
                         
                     const uploadData = await ((await checkFetchError(await fetch(url))).json() as Promise<DirectUploadModel>);    
 
                     //we will set this few times no isses
-                    filesystemLink = `${uploadData.config.filesystemLink}/${folderName}`;
+                    savedFolder = uploadData.rootFolder;
+                    filesystemLink = `${uploadData.config.filesystemLink}/${savedFolder}`;
 
                     const uploader = await Evaporate.create(_.assign(uploadData.config, {
 
@@ -196,7 +277,7 @@ class galleryReducer extends ReducerBase<IMediaFilesState, myActions>{
 
             await waiter.waitPromise;
 
-            return { mediaFiles, filesystemLink } as SavedMediaProps;
+            return { mediaFiles, filesystemLink, savedFolder} as SavedMediaProps;
         };
     }
 }

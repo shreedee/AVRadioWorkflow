@@ -9,6 +9,9 @@ namespace components.folderCreator
     {
         public string[] availableLanguage { get; set; }
         public string[] availableGenres { get; set; }
+        public string[] availablePlaces { get; set; }
+
+        public string[] availableCategories { get; set; }
 
         public string defaultLanguage { get; set; }
         public string defaultGenre { get; set; } 

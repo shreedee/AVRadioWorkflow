@@ -25,7 +25,6 @@ namespace components.folderCreator
         [bootCommon.ExportAsOptional]
         public string category { get; set; }
 
-        [JsonConverter(typeof(mediaList.MediaFileBaseConverter))]
         public mediaList.MediaFileBaseModel[] mediaFiles { get; set; }
     }
 }

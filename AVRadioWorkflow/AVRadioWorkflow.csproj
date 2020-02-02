@@ -6,6 +6,10 @@
     <TypeScriptCompileBlocked>true</TypeScriptCompileBlocked>
   </PropertyGroup>
 
+  <PropertyGroup>
+    <DefaultItemExcludes>node_modules/**;wwwroot/**;ClientApp/preRenderDist/**;$(DefaultItemExcludes)</DefaultItemExcludes>
+  </PropertyGroup>
+
   <ItemGroup>
     <Compile Remove="pullRequest\evaporateJS\example\**" />
     <Compile Remove="pullRequest\evaporateJS\test\**" />
@@ -43,6 +47,7 @@
     <None Include="ClientApp\.\generated\CreateOptionModel.ts" />
     <None Include="ClientApp\.\generated\DirectUploadModel.ts" />
     <None Include="ClientApp\.\generated\ErrorViewModel.ts" />
+    <None Include="ClientApp\.\generated\FolderDataModel.ts" />
     <None Include="ClientApp\.\generated\FolderDetailsModel.ts" />
     <None Include="ClientApp\.\generated\ImageFileModel.ts" />
     <None Include="ClientApp\.\generated\MediaFileBaseModel.ts" />
@@ -57,6 +62,12 @@
     <TypeScriptCompile Include="ClientApp\components\folderCreator\reducer.ts" />
     <TypeScriptCompile Include="ClientApp\components\mediaList\index.tsx" />
     <TypeScriptCompile Include="ClientApp\components\mediaList\reducer.ts" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Update="appsettings.createOptions.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
 
   <Target Name="PublishRunWebpack" AfterTargets="ComputeFilesToPublish">

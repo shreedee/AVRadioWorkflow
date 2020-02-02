@@ -29,6 +29,10 @@ namespace components.mediaList
         Task SaveStream(string publicPathORkey, Stream stream);
 
         Task<string> readAsync(string publicPathORkey);
+
+        Task<string[]> getKeysByPrefix(string prefix);
+
+        Task copyObjectAsync(string from, string to);
     }
 
 
@@ -72,7 +76,7 @@ namespace components.mediaList
             if (!string.IsNullOrWhiteSpace(strs3UsesHttp) && strs3UsesHttp.ToLower() == "true")
                 _s3UsesHttp = true;
 
-            _storageRoot = section["StorageRoot"].Trim('/');
+            _storageRoot = (section["StorageRoot"]??"").Trim('/');
 
             //Don't do it as with s3 api we can't configure it to be public
             ensureLocalBucket();
@@ -303,6 +307,47 @@ e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
             return ToHexString(signature);
         }
 
+        #endregion
+
+        public async Task copyObjectAsync(string from,string to)
+        {
+            try
+            {
+                using (var s3Client = createS3Client())
+                {
+
+                    await s3Client.CopyObjectAsync(
+                        _uploadConfig.bucket, getStorageKey(getKey(from)),
+                        _uploadConfig.bucket, getStorageKey(getKey(to))
+                        );
+                }
+            }
+            catch (AmazonS3Exception ex)
+            {
+                throw new bootCommon.ExceptionWithCode("Failed to search", innerException: ex);
+            }
+        }
+
+
+
+        public async Task<string[]> getKeysByPrefix(string prefix)
+        {
+            try
+            {
+                var key_prefix = getKey(prefix);
+                using (var s3Client = createS3Client())
+                {
+                    var res = (await s3Client.ListObjectsAsync(_uploadConfig.bucket, getStorageKey(key_prefix)));
+
+                    return res.S3Objects.Select(o => publicPath(o.Key)).ToArray();
+                }
+            }
+            catch (AmazonS3Exception ex)
+            {
+                throw new bootCommon.ExceptionWithCode("Failed to search", innerException: ex);
+            }
+        }
+
         public async Task<string> readAsync(string publicPathORkey)
         {
             try
@@ -359,7 +404,7 @@ e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
 
         }
 
-        #endregion
+        
 
        
 

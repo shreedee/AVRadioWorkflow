@@ -13,6 +13,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using CustomExtensions;
+using System.IO;
 
 namespace components.folderCreator
 {
@@ -22,63 +23,124 @@ namespace components.folderCreator
         readonly ILogger _logger;
         readonly mediaList.IStorageService _storage;
 
+        readonly string _templateRoot;
+        readonly CreateOptionModel _createOptions = new CreateOptionModel();
+
+
         public FolderCreatorController(
+            IConfiguration configuration,
             mediaList.IStorageService storage,
             ILogger<FolderCreatorController> logger
         )
         {
             _logger = logger;
             _storage = storage;
-        }
+            _templateRoot= configuration["mediaLocations:templates"];
 
-        [HttpGet("options")]
-        public CreateOptionModel getOptions()
-        {
-            return new CreateOptionModel
-            {
-                //default Production
-                availableGenres = new[] { "Interview", "Meeting", "Music", "News", "Performance", "Presentation", "Production", "Reading", "Theater" }.OrderBy(l => l).ToArray(),
-                availableLanguage = new[] { "English", "Italian", "Tamil", "French", "Hindi", "Spanish", "German", "Russian", "Bengali" }.OrderBy(l => l).ToArray(),
-                
-                defaultGenre = "Production",
-                defaultLanguage = "English"
-            };
-
-            
+            configuration.Bind("createOptions", _createOptions);
         }
 
         [HttpGet("load")]
-        public async Task<FolderDetailsModel> LoadFolderDetails([FromQuery]string filename)
+        public async Task<FolderDataModel> LoadFolderDetails([FromQuery]string filename)
         {
-            
-            if (string.IsNullOrWhiteSpace(filename))
-                throw new ArgumentNullException("filename");
+            var ret = new FolderDataModel
+            {
+                createOptions = _createOptions
+            };
 
-            string jsonData = await _storage.readAsync(filename);
-            return JsonConvert.DeserializeObject<FolderDetailsModel>(jsonData);
+            if (string.IsNullOrWhiteSpace(filename))
+            {
+                ret.folderDetails = new FolderDetailsModel
+                {
+                    recordingDate = DateTime.Now,
+                    genre = ret.createOptions.defaultGenre,
+                    language = ret.createOptions.defaultLanguage
+                };
+            }
+            else
+            {
+                string jsonData = await _storage.readAsync(filename);
+                ret.folderDetails = JsonConvert.DeserializeObject<FolderDetailsModel>(jsonData);
+                ret.externalLink = $"{_storage.uploadConfig.filesystemLink}/{ret.folderDetails.savedFolder}";
+            }
+
+            return ret;
+
         }
 
-        [HttpPost("newFolder")]
-        public async Task SaveFolderDetails([FromBody]FolderDetailsModel data)
+
+        Task<string[]> getTemplatesByGenreAsync(string genre) { return _storage.getKeysByPrefix($"{_templateRoot}/{genre}"); }
+
+        [HttpPost("save")]
+        public async Task<string> SaveFolderAsync([FromBody]FolderDetailsModel data)
         {
             if (string.IsNullOrWhiteSpace(data.savedFolder))
-                throw new Exception("savedfolder is empty");
+                throw new bootCommon.ExceptionWithCode("savedfolder is empty");
+
+            if (null == data.publishDetails || null == data.publishDetails.mediaFiles || 0 == data.publishDetails.mediaFiles.Length)
+            {
+                throw new bootCommon.ExceptionWithCode("no media files");
+            }
+
+            if (string.IsNullOrWhiteSpace(data.description))
+            {
+                throw new bootCommon.ExceptionWithCode("no description");
+            }
+
+            if (string.IsNullOrWhiteSpace(data.publishDetails.title))
+                data.publishDetails.title = data.description;
 
             var jsonData = JsonConvert.SerializeObject(data);
-            var fileName = $"{data.savedFolder}/sessionData.json";
+            var statusFileName = $"{data.savedFolder}/sessionData.json";
 
-            var stream = new System.IO.MemoryStream(Encoding.ASCII.GetBytes(jsonData));
+            var stream = new System.IO.MemoryStream(Encoding.UTF8.GetBytes(jsonData));
 
-            await _storage.SaveStream(fileName, stream);
+            await _storage.SaveStream(statusFileName, stream);
+
+            return statusFileName;
+        }
+
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="data"></param>
+        /// <returns>key for the saved session status file</returns>
+        [HttpPost("newFolder")]
+        public async Task<string> createNewFolder([FromBody]FolderDetailsModel data)
+        {
+            var statusFileName = await SaveFolderAsync(data);
 
             var origin = this.originFromURL("/api/foldercreator");
 
-            var shortcut = $"[InternetShortcut]\r\nURL={origin}/foldercreator?filename={System.Uri.EscapeDataString(fileName) }";
+            var shortcut = $"[InternetShortcut]\r\nURL={origin}/publiMe?filename={System.Uri.EscapeDataString(statusFileName) }";
 
-            stream = new System.IO.MemoryStream(Encoding.ASCII.GetBytes(shortcut));
+            var stream = new System.IO.MemoryStream(Encoding.UTF8.GetBytes(shortcut));
 
             await _storage.SaveStream($"{data.savedFolder}/avRadioPublisher.url", stream);
 
+            var templatePrefix = "Other_";
+            var otherTemplates = await getTemplatesByGenreAsync(templatePrefix);
+
+            var templatemap = otherTemplates.ToDictionary(k =>  k.Replace(templatePrefix, ""), v => v);
+
+            templatePrefix = $"{data.genre}_";
+            var genre_templates = await getTemplatesByGenreAsync(templatePrefix);
+            foreach(var t in genre_templates)
+            {
+                templatemap[t.Replace(templatePrefix, "")] = t;
+            }
+
+            foreach(var t in templatemap.Values)
+            {
+                await _storage.copyObjectAsync(t, $"{data.savedFolder}/{Path.GetFileName(t)}");
+            }
+
+            //create the FinalFolder With dummey status
+            stream = new System.IO.MemoryStream(Encoding.UTF8.GetBytes("{}"));
+            await _storage.SaveStream($"{data.savedFolder}/Final/status.json", stream);
+
+            return statusFileName;
         }
                 
 
