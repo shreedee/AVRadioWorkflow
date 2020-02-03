@@ -8,5 +8,7 @@ namespace components.mediaList
     public class AuViFileModel : MediaFileBaseModel
     {
         public override string fileType { get { return "Original"; } set { } }
+
+        public AudioInfoModel info { get; set; }
     }
 }

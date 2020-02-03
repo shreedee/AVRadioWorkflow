@@ -10,5 +10,11 @@ namespace components.mediaList
         public string photographer { get; set; }
 
         public override string fileType { get { return "Images"; } set { } }
+
+        public ImageInfoModel imageInfo { get; set; }
+
+        public bool canPublish { get; set; }
+
+
     }
 }

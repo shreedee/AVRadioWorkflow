@@ -42,6 +42,8 @@ namespace components.mediaList
         readonly static Regex _filenameRegex = new Regex(@"[^a-zA-Z0-9\.]");
         readonly static Regex _pathRegex = new Regex(@"[^a-zA-Z0-9/\.]");
 
+        readonly static string[] _supportedImages = new[] {"png","jpg","jpeg","gif" };
+
         /// <summary>
         /// For this controller the client decides whihc path to put this file in 
         /// </summary>
@@ -81,6 +83,13 @@ namespace components.mediaList
                 throw new bootCommon.ExceptionWithCode($"fileType : {fileType} is invalid");
 
             var mediaType = mediaSplit[0];
+            if("image"== mediaType)
+            {
+                if (!_supportedImages.Contains(mediaSplit[1].ToLower()))
+                {
+                    mediaType = "other";
+                }
+            }
 
             MediaFileBaseModel mediafile = null;
             switch (mediaType)

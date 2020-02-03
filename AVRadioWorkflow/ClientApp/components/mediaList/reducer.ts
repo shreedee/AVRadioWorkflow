@@ -167,8 +167,17 @@ class galleryReducer extends ReducerBase<IMediaFilesState, myActions>{
             
         };
     }
+   
+    addRemoveMedia (galleyId: string, list: MediaFileBaseModel[], remove?: boolean, remover?: (listf: MediaFileBaseModel[]) => void) {
 
-    addRemoveMedia = (galleyId: string, list: MediaFileBaseModel[], remove?: boolean) => this._myActions.addRemoveMedia(galleyId, list, remove);
+        return async (dispatch, getState) => {
+            if (remove && remover)
+                dispatch(remover(list));
+
+            dispatch(this._myActions.addRemoveMedia(galleyId, list, remove))
+        };
+        
+    }
 
     selectObjectType = (value?: string) => this._myActions.selectObjectType(value);
 

@@ -25,6 +25,7 @@
     <None Remove="ClientApp\components\folderCreator\newFolder.tsx" />
     <None Remove="ClientApp\components\folderCreator\publiMe.tsx" />
     <None Remove="ClientApp\components\folderCreator\reducer.ts" />
+    <None Remove="ClientApp\components\mainNav\index.tsx" />
     <None Remove="ClientApp\components\mediaList\index.tsx" />
     <None Remove="ClientApp\components\mediaList\reducer.ts" />
   </ItemGroup>
@@ -33,7 +34,9 @@
     <PackageReference Include="AWSSDK.S3" Version="3.3.110.18" />
     <PackageReference Include="Microsoft.AspNetCore.App" />
     <PackageReference Include="Microsoft.AspNetCore.Razor.Design" Version="2.1.2" PrivateAssets="All" />
+    <PackageReference Include="NAudio" Version="1.10.0" />
     <PackageReference Include="Newtonsoft.Json" Version="12.0.3" />
+    <PackageReference Include="SixLabors.ImageSharp" Version="1.0.0-beta0007" />
     <PackageReference Include="WordPressPCL" Version="1.6.2" />
   </ItemGroup>
 
@@ -43,13 +46,17 @@
 
   <ItemGroup>
     <None Include="ClientApp\.\generated\ArticleModel.ts" />
+    <None Include="ClientApp\.\generated\AudioInfoModel.ts" />
     <None Include="ClientApp\.\generated\AuViFileModel.ts" />
     <None Include="ClientApp\.\generated\CreateOptionModel.ts" />
+    <None Include="ClientApp\.\generated\CredsModel.ts" />
     <None Include="ClientApp\.\generated\DirectUploadModel.ts" />
+    <None Include="ClientApp\.\generated\DisplayDataModel.ts" />
     <None Include="ClientApp\.\generated\ErrorViewModel.ts" />
     <None Include="ClientApp\.\generated\FolderDataModel.ts" />
     <None Include="ClientApp\.\generated\FolderDetailsModel.ts" />
     <None Include="ClientApp\.\generated\ImageFileModel.ts" />
+    <None Include="ClientApp\.\generated\ImageInfoModel.ts" />
     <None Include="ClientApp\.\generated\MediaFileBaseModel.ts" />
     <None Include="ClientApp\.\generated\OtherFileModel.ts" />
     <None Include="ClientApp\.\generated\PublishDetailsModel.ts" />
@@ -60,6 +67,7 @@
     <TypeScriptCompile Include="ClientApp\components\folderCreator\newFolder.tsx" />
     <TypeScriptCompile Include="ClientApp\components\folderCreator\publiMe.tsx" />
     <TypeScriptCompile Include="ClientApp\components\folderCreator\reducer.ts" />
+    <TypeScriptCompile Include="ClientApp\components\mainNav\index.tsx" />
     <TypeScriptCompile Include="ClientApp\components\mediaList\index.tsx" />
     <TypeScriptCompile Include="ClientApp\components\mediaList\reducer.ts" />
   </ItemGroup>

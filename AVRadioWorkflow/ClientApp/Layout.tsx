@@ -1,24 +1,13 @@
 import * as React from 'react';
-
+import {  Container } from 'react-bootstrap';
 import './siteWide.scss';
-import { Navbar, Nav, Container } from 'react-bootstrap';
-import { LinkContainer } from 'react-router-bootstrap';
 
-const MainNav: React.SFC<{}> = () => {
-    return <Navbar bg="light" expand="lg">
-        <LinkContainer to="/"><Navbar.Brand >AVRadio Workflow</Navbar.Brand></LinkContainer>
-        <Navbar.Toggle aria-controls="basic-navbar-nav" />
-        <Navbar.Collapse id="basic-navbar-nav">
-            <Nav className="mr-auto">
-                <LinkContainer to="/publiMe"><Nav.Link>PubliMe</Nav.Link></LinkContainer>
-                <LinkContainer to="/foldercreator"><Nav.Link >Create new folder</Nav.Link></LinkContainer>
-            </Nav>
-
-        </Navbar.Collapse>
-    </Navbar>;
-}
 
 import WaitBox from './components/waitBox';
+
+import Login from './components/login';
+
+import MainNav from './components/mainNav';
 
 
 class LayoutView extends React.Component<{}, {}> {
@@ -27,7 +16,8 @@ class LayoutView extends React.Component<{}, {}> {
 
         return <Container>
             <MainNav />
-            <WaitBox/>
+            <WaitBox />
+            <Login/>
             <div className="mainContent">
                 {this.props.children}
             </div>

@@ -1,6 +1,6 @@
 ﻿import React from 'react';
 
-import { Card, Form, Row, Col, InputGroup, Button, Alert } from 'react-bootstrap';
+import { Card, Form, Row, Col, InputGroup, Button, Alert, ButtonToolbar  } from 'react-bootstrap';
 
 import { withRouter, RouteComponentProps } from 'react-router-dom';
 
@@ -52,15 +52,24 @@ class PubliMeView extends React.PureComponent<ConnectedProps & ComponentProps & 
 
     render() {
 
-        const { folderDetails, dispatch, createOptions, externalLink } = this.props;
+        const { folderDetails, dispatch, createOptions, displayData } = this.props;
+
+    
         const publishDetails = folderDetails && folderDetails.publishDetails;
 
         return <div className="folderCreator">
 
-            {externalLink && <Alert variant="info">
-                fileSystem link : {externalLink}
+            {displayData && displayData.externalLink && <Alert variant="info">
+                fileSystem link : {displayData.externalLink}
             </Alert>
             }
+
+            <Form
+                onSubmit={async e => {
+                    e.preventDefault();
+                    await dispatch(ensureCreator().publish());
+                }}
+            >
 
             <Row>
                 <Col lg={6}>
@@ -121,7 +130,14 @@ class PubliMeView extends React.PureComponent<ConnectedProps & ComponentProps & 
                     </Card>
                 </Col>
                 <Col lg={6}>
-                    <MediaList galleryId="folderCreator" imageSaver={files => dispatch(ensureCreator().addToMedia(files))} />
+                    <MediaList galleryId="folderCreator"
+                        rootPath={folderDetails && folderDetails.savedFolder &&
+                            displayData && displayData.httpLinkPrefix &&
+                            `${displayData .httpLinkPrefix}/${folderDetails.savedFolder}`}
+                        imageSaver={{
+                            saver: files => dispatch(ensureCreator().addToMedia(files)),
+                            remover: files => dispatch(ensureCreator().removeMedia(files))
+                        }} />
                 </Col>
             </Row>
 
@@ -192,6 +208,17 @@ class PubliMeView extends React.PureComponent<ConnectedProps & ComponentProps & 
                 </Col>
             </Row>
 
+
+            <div className="footer">
+                <ButtonToolbar className="justify-content-between">
+                        <Button variant="info"
+                            onClick={() => dispatch(ensureCreator().saveCurrentChanges())}
+                        >Save folder</Button>
+                    <Button type="submit" variant="primary">PUBLISH</Button>
+                </ButtonToolbar>
+                </div>
+
+            </Form>
 
         </div>;
     }

@@ -1,5 +1,5 @@
 ﻿import * as React from 'react';
-import { FormControl, ListGroup, Button, OverlayTrigger, Tooltip, Card, Accordion, Badge } from 'react-bootstrap';
+import { FormControl, ListGroup, Button, OverlayTrigger, Tooltip, Card, Accordion, Badge, Image } from 'react-bootstrap';
 
 import ensureMedia, { IMediaFilesState } from './reducer';
 
@@ -7,6 +7,7 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faFileArchive } from '@fortawesome/free-solid-svg-icons';
 
 import { MediaFileBaseModel } from '../../generated/MediaFileBaseModel';
+import { ImageFileModel } from '../../generated/ImageFileModel';
 
 import * as _ from 'lodash';
 
@@ -14,14 +15,21 @@ import "./styles.scss";
 
 type ComponentProps = {
     galleryId: string;
-    imageSaver?: (files: File[]) => PromiseLike<MediaFileBaseModel[]>;
+    imageSaver?: {
+        saver: (files: File[]) => PromiseLike<MediaFileBaseModel[]>;
+        remover: (list: MediaFileBaseModel[])=>void
+    };
+    rootPath?: string;
 };
 
 type ConnectedProps = IMediaFilesState;
 
 let _fileRenderIdCounter = 0;
 
-const MediaListView: React.SFC<ComponentProps & ConnectedProps & { dispatch }> = ({ objectList, galleryId, dispatch, hasDragOver, selectedObjectType, imageSaver}) => {
+const MediaListView: React.SFC<ComponentProps & ConnectedProps & { dispatch }> = ({ objectList, galleryId, dispatch, hasDragOver,
+    selectedObjectType, imageSaver,
+    rootPath
+}) => {
     ///the hidden file form Element
     let _fileInputRef = null;
 
@@ -58,7 +66,7 @@ const MediaListView: React.SFC<ComponentProps & ConnectedProps & { dispatch }> =
             dispatch(ensureMedia().setDragOver(galleryId, false));
 
             if (e.dataTransfer.files)
-                dispatch(ensureMedia().addRemoveFiles(galleryId, [...e.dataTransfer.files], false, imageSaver));
+                dispatch(ensureMedia().addRemoveFiles(galleryId, [...e.dataTransfer.files], false, imageSaver.saver));
 
             return false;
         }}
@@ -82,7 +90,7 @@ const MediaListView: React.SFC<ComponentProps & ConnectedProps & { dispatch }> =
             style={{ height: 0, width: 0, opacity: 0, display: 'contents' }} onChange={(e: any) => {
                 e.preventDefault();
                 //the event is of type FIleList we need to convert it to file[]
-                dispatch(ensureMedia().addRemoveFiles(galleryId, [...e.nativeEvent.target.files], false, imageSaver));
+                dispatch(ensureMedia().addRemoveFiles(galleryId, [...e.nativeEvent.target.files], false, imageSaver.saver));
             }}
         />
 
@@ -104,13 +112,35 @@ const MediaListView: React.SFC<ComponentProps & ConnectedProps & { dispatch }> =
                     <Accordion.Collapse eventKey={mediaParts[mp][0].objectType}>
                         <Card.Body>
                             <ListGroup >
-                                {mediaParts[mp].map((f, i) => <ListGroup.Item key={i}>
+                                {mediaParts[mp].map((f, i) => <ListGroup.Item key={i}
+                                    variant={('ImageFileModel' == f.objectType && !(f as ImageFileModel).canPublish) ? 'danger':null}>
 
                                     <div className="d-flex">
-                                        <div className="mr-auto fileDisplay">{f.fileName}</div>
-                                        <div >
+                                        {(() => {
+                                            switch (f.objectType) {
+                                                case 'ImageFileModel':
+                                                    return <div className="d-flex" >
+
+                                                        {rootPath && <div style={{ height: 100, width: 100 }}>
+                                                            <Image src={`${rootPath}/${f.path}`} fluid />
+                                                        </div>
+                                                        }
+
+                                                        <div className="fileDisplay">
+                                                            <div>{f.fileName}</div>
+                                                            {!(f as ImageFileModel).canPublish && <div className="text-muted">incorrect aspect ratio</div>}
+                                                        </div>
+                                                    </div>;
+                                                default:
+                                                    return <div className="fileDisplay">
+                                                        {f.fileName}
+                                                    </div>;
+                                            }
+                                        })()}
+                                        
+                                        <div className="ml-auto">
                                             <Button title="remove file" variant="danger" size="sm"
-                                                onClick={() => dispatch(ensureMedia().addRemoveMedia(galleryId, [f], true))}
+                                                onClick={() => dispatch(ensureMedia().addRemoveMedia(galleryId, [f], true, imageSaver.remover))}
                                             >X</Button>
                                         </div>
                                     </div>

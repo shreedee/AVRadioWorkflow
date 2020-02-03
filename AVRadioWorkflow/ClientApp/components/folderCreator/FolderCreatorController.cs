@@ -15,17 +15,20 @@ using Newtonsoft.Json;
 using CustomExtensions;
 using System.IO;
 
+
 namespace components.folderCreator
 {
     [Route("api/[controller]")]
-    public class FolderCreatorController : Controller
+    public partial class FolderCreatorController : Controller
     {
         readonly ILogger _logger;
         readonly mediaList.IStorageService _storage;
 
         readonly string _templateRoot;
         readonly CreateOptionModel _createOptions = new CreateOptionModel();
+        readonly mediaList.ImageInfoModel _desiredImageInfo = new mediaList.ImageInfoModel();
 
+        readonly string _wp_url;
 
         public FolderCreatorController(
             IConfiguration configuration,
@@ -38,6 +41,9 @@ namespace components.folderCreator
             _templateRoot= configuration["mediaLocations:templates"];
 
             configuration.Bind("createOptions", _createOptions);
+            configuration.Bind("desiredImageInfo", _desiredImageInfo);
+
+            _wp_url = configuration["wordpress:url"];
         }
 
         [HttpGet("load")]
@@ -61,13 +67,20 @@ namespace components.folderCreator
             {
                 string jsonData = await _storage.readAsync(filename);
                 ret.folderDetails = JsonConvert.DeserializeObject<FolderDetailsModel>(jsonData);
-                ret.externalLink = $"{_storage.uploadConfig.filesystemLink}/{ret.folderDetails.savedFolder}";
+
+                ret.displayData = new DisplayDataModel
+                {
+                    externalLink = $"{_storage.uploadConfig.filesystemLink}/{ret.folderDetails.savedFolder}",
+                    httpLinkPrefix = $"{_storage.uploadConfig.aws_url}/{_storage.uploadConfig.bucket}",
+                    desiredImageInfo = _desiredImageInfo
+                };
             }
 
             return ret;
 
         }
 
+        
 
         Task<string[]> getTemplatesByGenreAsync(string genre) { return _storage.getKeysByPrefix($"{_templateRoot}/{genre}"); }
 
@@ -81,6 +94,37 @@ namespace components.folderCreator
             {
                 throw new bootCommon.ExceptionWithCode("no media files");
             }
+
+            {
+                var unInitializedMediaFile = data.publishDetails.mediaFiles.Where(f =>
+                                f.objectType == typeof(mediaList.ImageFileModel).Name
+                                && null == ((mediaList.ImageFileModel)f).imageInfo)
+                        .Cast<mediaList.ImageFileModel>().ToArray();
+
+                await Task.WhenAll(unInitializedMediaFile.Select(async f =>
+                {
+                    f.imageInfo = await _storage.getImageInfoAsync($"{data.savedFolder}/{f.path}");
+
+                    var tolerance = ((f.imageInfo.height * 1.0) / f.imageInfo.width) / ((_desiredImageInfo.height * 1.0) / _desiredImageInfo.width);
+
+                    f.canPublish = tolerance >= 0.87 && tolerance < 1.05;
+
+                    return true;
+                }));
+            }
+
+            {/*
+                var unInitializedMediaFile = data.publishDetails.mediaFiles.Where(f =>
+                                f.objectType == typeof(mediaList.AuViFileModel).Name
+                                && null == ((mediaList.AuViFileModel)f).info)
+                        .Cast<mediaList.AuViFileModel>().ToArray();
+
+                await Task.WhenAll(unInitializedMediaFile.Select(async f =>
+                {
+                    f.info = await _storage.getAudioInfoAsync($"{data.savedFolder}/{f.path}");
+                    return true;
+                }));
+            */}
 
             if (string.IsNullOrWhiteSpace(data.description))
             {

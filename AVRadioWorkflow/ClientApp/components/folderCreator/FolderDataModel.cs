@@ -9,6 +9,7 @@ namespace components.folderCreator
     {
         public CreateOptionModel createOptions { get; set; }
         public FolderDetailsModel folderDetails { get; set; }
-        public string externalLink { get; set; }
+
+        public DisplayDataModel displayData { get; set; }
     }
 }

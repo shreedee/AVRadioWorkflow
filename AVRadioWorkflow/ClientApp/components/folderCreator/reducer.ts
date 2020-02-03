@@ -9,6 +9,8 @@ import { FolderDataModel } from '../../generated/FolderDataModel';
 
 import { MediaFileBaseModel } from '../../generated/MediaFileBaseModel';
 
+import ensureLogin from '../login/reducer';
+
 
 import { checkFetchError } from '../../bootCommon/asyncLoader';
 
@@ -83,9 +85,20 @@ class creatorReducer extends ReducerBase<ICreatorState, myActions>{
         return {
             folderDetails: handleActions(detailsHandlers, null),
             createOptions: handleAction(this._myActions.loadData, (state, action: { payload: FolderDataModel }) => (action.payload && action.payload.createOptions) || null, null),
-            externalLink: handleAction(this._myActions.loadData, (state, action: { payload: FolderDataModel }) => (action.payload && action.payload.externalLink) || null, null),
+            displayData: handleAction(this._myActions.loadData, (state, action: { payload: FolderDataModel }) => (action.payload && action.payload.displayData) || null, null),
         };
 
+    }
+
+    removeMedia(list: MediaFileBaseModel[]) {
+        const _mine = this;
+        return async (dispatch, getState) => {
+            const { folderDetails } = _mine.getCurrentState(getState());
+            if (!folderDetails.savedFolder)
+                throw 'Folder not yet initialized';
+
+            await dispatch(_mine.saveCurrentChanges(list, true));
+        };
     }
 
     addToMedia(files:File[]) {
@@ -108,7 +121,33 @@ class creatorReducer extends ReducerBase<ICreatorState, myActions>{
         };
     }
 
-    saveCurrentChanges(newMediaFiles?: MediaFileBaseModel[]) {
+    publish() {
+        const _mine = this;
+        return async (dispatch, getState) => {
+            await dispatch(_mine.saveCurrentChanges());
+
+            const jwt = await dispatch(ensureLogin().ensureSignedIn());
+
+            await dispatch(ensureWaitBox().doWaitAsync('publishing', async () => {
+
+                const { folderDetails } = _mine.getCurrentState(getState());
+
+                await checkFetchError(await fetch('/api/foldercreator/publish', {
+                    method: 'post',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        Authorization: 'Bearer ' + jwt
+                    },
+                    body: JSON.stringify(folderDetails)
+                }));
+
+
+                return true;
+            }));
+        };
+    }
+
+    saveCurrentChanges(newMediaFiles?: MediaFileBaseModel[], remove?: boolean) {
         const _mine = this;
         return async (dispatch, getState) => {
 
@@ -119,14 +158,20 @@ class creatorReducer extends ReducerBase<ICreatorState, myActions>{
 
                     if (!!newMediaFiles) {
                         const mediaFiles = folderDetails && folderDetails.publishDetails && folderDetails.publishDetails.mediaFiles || [];
-                        dispatch(_mine.updatePublishProps('mediaFiles', _.concat(mediaFiles, newMediaFiles)));
+
+                        const removePaths = remove && newMediaFiles && _.map(newMediaFiles, f => f.path);
+
+                        dispatch(_mine.updatePublishProps('mediaFiles',
+                            remove ?
+                                _.filter(mediaFiles, f => !_.includes(removePaths,f.path)):
+                                _.concat(mediaFiles, newMediaFiles)));
                     }
                 }
 
                 {
                     const { folderDetails } = _mine.getCurrentState(getState());
 
-                    await (await checkFetchError(await fetch('/api/foldercreator/save', {
+                    const done = await (await checkFetchError(await fetch('/api/foldercreator/save', {
                         method: 'post',
                         headers: {
                             'Content-Type': 'application/json'

@@ -16,6 +16,10 @@ using System.Security.Cryptography;
 using System.Text;
 using Amazon.S3;
 using System.IO;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.Processing;
+using SixLabors.ImageSharp.Formats;
+using NAudio.Wave;
 
 namespace components.mediaList
 {
@@ -33,6 +37,12 @@ namespace components.mediaList
         Task<string[]> getKeysByPrefix(string prefix);
 
         Task copyObjectAsync(string from, string to);
+
+        Task<ImageInfoModel> getImageInfoAsync(string publicPathORkey);
+
+        Task<Stream> getStreamAsync(string publicPathORkey);
+        Task<Stream> getImageStream(string publicPathORkey, int width);
+        Task<AudioInfoModel> getAudioInfoAsync(string publicPathORkey);
     }
 
 
@@ -309,6 +319,82 @@ e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
 
         #endregion
 
+
+        public async Task<Stream> getImageStream(string publicPathORkey, int width)
+        {
+            var key = getKey(publicPathORkey);
+            using (var s3Client = createS3Client())
+            {
+                var res = await s3Client.GetObjectAsync(_uploadConfig.bucket, getStorageKey(key));
+
+                var ms = new MemoryStream();
+                {
+                    await res.ResponseStream.CopyToAsync(ms);
+                    ms.Seek(0, SeekOrigin.Begin);
+                    using (var image = Image.Load(ms, out IImageFormat format))
+                    {
+                        if(image.Width == width)
+                        {
+                            ms.Seek(0, SeekOrigin.Begin);
+                            return ms;
+                        }
+
+                        var height = image.Height * (width / image.Width);
+
+                        image.Mutate(
+                            i => i.Resize(width, height)
+                                  );
+
+                        var outStream = new MemoryStream();
+                        image.Save(outStream, format);
+
+                        outStream.Seek(0, SeekOrigin.Begin);
+                        return outStream;
+                    }
+                }
+            }
+
+        }
+
+        public async Task<ImageInfoModel> getImageInfoAsync(string publicPathORkey)
+        {
+            var key = getKey(publicPathORkey);
+            using (var s3Client = createS3Client())
+            {
+                var res = await s3Client.GetObjectAsync(_uploadConfig.bucket, getStorageKey(key));
+
+                using (var image = Image.Load(res.ResponseStream))
+                {
+                    return new ImageInfoModel
+                    {
+                        width = image.Width,
+                        height = image.Height
+                    };
+                }
+
+            }
+        }
+
+
+        public async Task<AudioInfoModel> getAudioInfoAsync(string publicPathORkey)
+        {
+            var key = getKey(publicPathORkey);
+            using (var s3Client = createS3Client())
+            {
+                var res = await s3Client.GetObjectAsync(_uploadConfig.bucket, getStorageKey(key));
+
+                using (var audio = new WaveFileReader(res.ResponseStream))
+                {
+                    return new AudioInfoModel
+                    {
+                        duration = audio.TotalTime
+                    };
+                }
+
+            }
+        }
+
+
         public async Task copyObjectAsync(string from,string to)
         {
             try
@@ -328,8 +414,6 @@ e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
             }
         }
 
-
-
         public async Task<string[]> getKeysByPrefix(string prefix)
         {
             try
@@ -348,7 +432,9 @@ e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
             }
         }
 
-        public async Task<string> readAsync(string publicPathORkey)
+       
+
+        public async Task<Stream> getStreamAsync(string publicPathORkey)
         {
             try
             {
@@ -356,9 +442,26 @@ e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
                 using (var s3Client = createS3Client())
                 {
                     var res = await s3Client.GetObjectAsync(_uploadConfig.bucket, getStorageKey(key));
-                    var reader = new StreamReader(res.ResponseStream);
-                    return reader.ReadToEnd();
+
+                    var ms = new MemoryStream();
+                    await res.ResponseStream.CopyToAsync(ms);
+                    ms.Seek(0, SeekOrigin.Begin);
+                    return ms;
                 }
+            }
+            catch (Exception ex)
+            {
+                throw new bootCommon.ExceptionWithCode("file not found", innerException: ex);
+            }
+
+        }
+
+        public async Task<string> readAsync(string publicPathORkey)
+        {
+            try
+            {
+                var reader = new StreamReader(await getStreamAsync(publicPathORkey));
+                return reader.ReadToEnd();
             }
             catch (Exception ex)
             {

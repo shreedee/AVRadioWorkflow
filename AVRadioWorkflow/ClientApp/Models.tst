@@ -11,7 +11,6 @@
         {
             //if(!Directory.Exists("./generated"))
             //    Directory.CreateDirectory("./generated");
-
             return $"./generated/{Path.GetFileNameWithoutExtension(file.Name)}.ts";
         };
     }
