@@ -102,7 +102,10 @@ class galleryReducer extends ReducerBase<IMediaFilesState, myActions>{
                 }
 
                 const mediaList = _.reduce(newList, (acc, o) => {
-                    acc[o.objectType] = _.concat(acc[o.objectType] || [], o);
+
+                    if (!!o) {
+                        acc[o.objectType] = _.concat(acc[o.objectType] || [], o);
+                    } 
                     return acc;
                 }, {} as { [mediaType: string]: MediaFileBaseModel[] });
 
@@ -209,8 +212,8 @@ class galleryReducer extends ReducerBase<IMediaFilesState, myActions>{
 
                 mediaFiles = await Promise.all(filesUnOrdered.map(async (file, i) => {
 
-                    if (file.size > 1024 * 1024 * 100) {
-                        throw 'max file size is 100 MB';
+                    if (file.size > 1024 * 1024 * 1024 * 100) {
+                        throw 'max file size is 1 GB';
                     }
 
                     

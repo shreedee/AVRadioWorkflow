@@ -65,7 +65,7 @@ namespace components.mediaList
             
             fileName = _filenameRegex.Replace(fileName, "_");
 
-            folderpath = _pathRegex.Replace(folderpath, "_");
+            var orgFolderPath = folderpath = _pathRegex.Replace(folderpath, "_");
 
             if (!folderpath.StartsWith(_articlesRoot))
                 folderpath = $"{_articlesRoot}/{folderpath}";
@@ -101,7 +101,7 @@ namespace components.mediaList
                 case "audio":
                 case "video":
                     mediafile = new AuViFileModel();
-                    mediafile.fileName = $"{folderpath}_{fileName}";
+                    mediafile.fileName = $"{orgFolderPath}_{fileName}";
                     break;
                 default:
                     mediafile = new OtherFileModel();

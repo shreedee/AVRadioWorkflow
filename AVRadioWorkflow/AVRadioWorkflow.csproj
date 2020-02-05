@@ -60,6 +60,7 @@
     <None Include="ClientApp\.\generated\MediaFileBaseModel.ts" />
     <None Include="ClientApp\.\generated\OtherFileModel.ts" />
     <None Include="ClientApp\.\generated\PublishDetailsModel.ts" />
+    <None Include="ClientApp\.\generated\PublishedLinkModel.ts" />
     <None Include="ClientApp\.\generated\UploadConfigModel.ts" />
   </ItemGroup>
 

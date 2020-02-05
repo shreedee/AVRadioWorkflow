@@ -25,5 +25,8 @@ namespace components.folderCreator
         [bootCommon.ExportAsOptional]
         public PublishDetailsModel publishDetails { get; set; }
 
+        [bootCommon.ExportAsOptional]
+        public PublishedLinkModel publishedLink { get; set; }
+
     }
 }

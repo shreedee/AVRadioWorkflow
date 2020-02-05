@@ -128,22 +128,25 @@ class creatorReducer extends ReducerBase<ICreatorState, myActions>{
 
             const jwt = await dispatch(ensureLogin().ensureSignedIn());
 
+            let statusFile = '';
             await dispatch(ensureWaitBox().doWaitAsync('publishing', async () => {
 
                 const { folderDetails } = _mine.getCurrentState(getState());
 
-                await checkFetchError(await fetch('/api/foldercreator/publish', {
+                statusFile = await (await checkFetchError(await fetch('/api/foldercreator/publish', {
                     method: 'post',
                     headers: {
                         'Content-Type': 'application/json',
                         Authorization: 'Bearer ' + jwt
                     },
                     body: JSON.stringify(folderDetails)
-                }));
+                }))).text();
 
 
                 return true;
             }));
+
+            return statusFile;
         };
     }
 

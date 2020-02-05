@@ -66,7 +66,7 @@ const MediaListView: React.SFC<ComponentProps & ConnectedProps & { dispatch }> =
             dispatch(ensureMedia().setDragOver(galleryId, false));
 
             if (e.dataTransfer.files)
-                dispatch(ensureMedia().addRemoveFiles(galleryId, [...e.dataTransfer.files], false, imageSaver.saver));
+                dispatch(ensureMedia().addRemoveFiles(galleryId, [...e.dataTransfer.files], false, imageSaver && imageSaver.saver));
 
             return false;
         }}
@@ -90,7 +90,7 @@ const MediaListView: React.SFC<ComponentProps & ConnectedProps & { dispatch }> =
             style={{ height: 0, width: 0, opacity: 0, display: 'contents' }} onChange={(e: any) => {
                 e.preventDefault();
                 //the event is of type FIleList we need to convert it to file[]
-                dispatch(ensureMedia().addRemoveFiles(galleryId, [...e.nativeEvent.target.files], false, imageSaver.saver));
+                dispatch(ensureMedia().addRemoveFiles(galleryId, [...e.nativeEvent.target.files], false, imageSaver && imageSaver.saver));
             }}
         />
 
@@ -140,7 +140,7 @@ const MediaListView: React.SFC<ComponentProps & ConnectedProps & { dispatch }> =
                                         
                                         <div className="ml-auto">
                                             <Button title="remove file" variant="danger" size="sm"
-                                                onClick={() => dispatch(ensureMedia().addRemoveMedia(galleryId, [f], true, imageSaver.remover))}
+                                                onClick={() => dispatch(ensureMedia().addRemoveMedia(galleryId, [f], true, imageSaver && imageSaver.remover))}
                                             >X</Button>
                                         </div>
                                     </div>

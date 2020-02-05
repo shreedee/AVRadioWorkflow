@@ -30,6 +30,9 @@ namespace components.folderCreator
 
         readonly string _wp_url;
 
+        readonly string[] _archiveLocations;
+        readonly string _articlesRoot;
+
         public FolderCreatorController(
             IConfiguration configuration,
             mediaList.IStorageService storage,
@@ -44,6 +47,11 @@ namespace components.folderCreator
             configuration.Bind("desiredImageInfo", _desiredImageInfo);
 
             _wp_url = configuration["wordpress:url"];
+
+            _archiveLocations = configuration.GetSection("mediaLocations:afterPublish").Get<string[]>();
+
+            
+            _articlesRoot = configuration["mediaLocations:articles"];
         }
 
         [HttpGet("load")]
@@ -80,10 +88,47 @@ namespace components.folderCreator
 
         }
 
-        
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="data"></param>
+        /// <returns>The new published location </returns>
+        [HttpPost("publish")]
+        public async Task<String> Publish([FromBody]FolderDetailsModel data)
+        {
+            var statusFileName = await SaveFolderAsync(data);
+            var link = await PushToWP(data);
+
+            var currentSavedFolder = data.savedFolder;
+
+            string publishedLocation = null;
+
+            foreach(var location in _archiveLocations)
+            {
+                data.savedFolder = currentSavedFolder.ReplaceInBegining(_articlesRoot, location);
+                await _storage.copyFolderAsync(currentSavedFolder, data.savedFolder);
+
+                var newlocation = await createNewFolder(data);
+
+                if (null == publishedLocation)
+                    publishedLocation = newlocation;
+            }
+
+            await _storage.deleteFolderAsync(currentSavedFolder);
+
+            return publishedLocation;
+        }
+
+
+
 
         Task<string[]> getTemplatesByGenreAsync(string genre) { return _storage.getKeysByPrefix($"{_templateRoot}/{genre}"); }
 
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="data"></param>
+        /// <returns>Statusfile name</returns>
         [HttpPost("save")]
         public async Task<string> SaveFolderAsync([FromBody]FolderDetailsModel data)
         {

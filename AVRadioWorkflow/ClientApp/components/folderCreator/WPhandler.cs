@@ -10,12 +10,15 @@ namespace components.folderCreator
 {
     public partial class FolderCreatorController
     {
-        [HttpPost("publish")]
-        public async Task Publish([FromBody]FolderDetailsModel data)
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="data"></param>
+        /// <returns>The link to the post</returns>
+        async Task<String> PushToWP(FolderDetailsModel data)
         {
             try
             {
-                var statusFileName = await SaveFolderAsync(data);
 
                 if (string.IsNullOrWhiteSpace(data.publishDetails.category))
                     throw new bootCommon.ExceptionWithCode("category is required");
@@ -26,54 +29,65 @@ namespace components.folderCreator
 
                 if (string.IsNullOrWhiteSpace(data.publishDetails.bodyText))
                     throw new bootCommon.ExceptionWithCode("bodyText is empty");
-                               
+
                 var client = await login.AuthController.InitWP(_wp_url, Request);
 
+
+                var imagesToUpload = data.publishDetails.mediaFiles.Where(f => f is mediaList.ImageFileModel && ((mediaList.ImageFileModel)f).canPublish).ToArray();
+                if (0 == imagesToUpload.Length)
+                    throw new bootCommon.ExceptionWithCode("at least one image is required");
+
+                var avToUpload = data.publishDetails.mediaFiles.Where(f => f is mediaList.AuViFileModel).ToArray();
+                if (0 == avToUpload.Length)
+                    throw new bootCommon.ExceptionWithCode("at least one audio/video is required");
+
+                var allFileToUpload = imagesToUpload.Concat(avToUpload).ToArray();
+
+                foreach (var f in allFileToUpload)
                 {
-                    var imageCount = data.publishDetails.mediaFiles.Where(f => f is mediaList.ImageFileModel && ((mediaList.ImageFileModel)f).canPublish).Count();
-                    if(imageCount ==0 )
-                        throw new bootCommon.ExceptionWithCode("at least one image is required");
+                    var fPath = $"{data.savedFolder}/{f.proccessedPath}";
+                    if (!(await _storage.keyExists(fPath)))
+                    {
+                        throw new bootCommon.ExceptionWithCode($"the proccessed file {fPath} is not ready");
+                    }
+                } 
 
-                    imageCount = data.publishDetails.mediaFiles.Where(f => f is mediaList.AuViFileModel ).Count();
-                    if (imageCount == 0)
-                        throw new bootCommon.ExceptionWithCode("at least one audio/video is required");
-                }
-
-                var allCategories =  (await client.Categories.GetAll()).ToArray();
+                var allCategories = (await client.Categories.GetAll()).ToArray();
 
                 var category = allCategories.FirstOrDefault(c => c.Name == data.publishDetails.category);
                 if (null == category)
                     throw new bootCommon.ExceptionWithCode($"Category {data.publishDetails.category} not found");
+
+
+                if (null != data.publishedLink)
+                    throw new bootCommon.ExceptionWithCode("Not implemented");
 
                 var thePost = await client.Posts.Create(new Post
                 {
                     Status = Status.Draft,
                     Title = new Title(data.publishDetails.title),
                     Content = new Content(data.publishDetails.bodyText),
-                    Categories = new[] {category.Id }
+                    Categories = new[] { category.Id }
                 });
 
-                var uploadedMedia =await Task.WhenAll( data.publishDetails.mediaFiles.Where(f =>
+                data.publishedLink = new PublishedLinkModel
                 {
-                    var imagfile = f as mediaList.ImageFileModel;
+                    wpPostId = thePost.Id,
+                    wpLink = thePost.Link,
+                    lastModified = DateTime.Now
+                };
 
-                    if (null != imagfile && !imagfile.canPublish)
-                        return false;
+                await SaveFolderAsync(data);
 
-                    if (f is mediaList.OtherFileModel)
-                        return false;
-
-                    return true;
-                })
-                .Select(async (image,i) =>
+                var uploadedMedia = await Task.WhenAll(allFileToUpload.Select(async (image, i) =>
                 {
                     var ext = System.IO.Path.GetExtension(image.fileName).Trim('.');
 
                     var imageStream = (image is mediaList.ImageFileModel) ?
-                        await _storage.getImageStream($"{data.savedFolder}/{image.path}", 800)
-                        : await _storage.getStreamAsync($"{data.savedFolder}/{image.path}");
+                        await _storage.getImageStream($"{data.savedFolder}/{image.proccessedPath}", 800)
+                        : await _storage.getStreamAsync($"{data.savedFolder}/{image.proccessedPath}");
 
-                    var uploaded = await client.Media.Create(imageStream,$"{data.publishDetails.title}_{i}.{ext}");
+                    var uploaded = await client.Media.Create(imageStream, $"{data.publishDetails.title}_{i}.{ext}");
 
                     uploaded.Post = thePost.Id;
 
@@ -106,7 +120,7 @@ namespace components.folderCreator
                         {
                             mp3 = f.uploaded.Id,
                             mp3_artists = data.recordingBy,
-                            duration = null == image.info?"":image.info.duration.ToString(@"mm\:ss"),
+                            duration = null == image.info ? "" : image.info.duration.ToString(@"mm\:ss"),
                         };
                     })
                     .ToArray();
@@ -119,7 +133,7 @@ namespace components.folderCreator
                 };
                 */
 
-                var acfFields = new 
+                var acfFields = new
                 {
                     /*  program_rate
                     1 Can be better : 1 Can be better
@@ -140,33 +154,34 @@ namespace components.folderCreator
 
                     field_13 = "5 Excellent",//quality_rate
 
-                    field_15 = "AurovilleRadioTV" ,//place
-                    field_17 = data.publishDetails.twiterTitle ,//twitter_text
-                    field_18= "AurovilleRadio" ,//episode
+                    field_15 = "AurovilleRadioTV",//place
+                    field_17 = data.publishDetails.twiterTitle,//twitter_text
+                    field_18 = "AurovilleRadio",//episode
 
-                    field_5 = image_gallery ,//"image_gallery" 
+                    field_5 = image_gallery,//"image_gallery" 
                     field_3 = add_mp3s,//add-mp3s
                 };
 
-                /*
-                var post = new Post()
-                {
-                    Title = new Title(data.publishDetails.title),
-                    Content = new Content(data.publishDetails.bodyText)
-                };
-
-                var createdPost = await client.Posts.Create(post);
-                */
+                
 
                 var done = await postToWP(client, new {
                     postId = thePost.Id,
                     acfFields,
                     featuredImageId = image_gallery.First().add_a_picture
                 });
+
+                data.publishedLink.lastModified = DateTime.Now;
+                await SaveFolderAsync(data);
+
+                return thePost.Link;
             }
-            catch(Exception ex)
+            catch (bootCommon.ExceptionWithCode ex)
             {
-                throw new bootCommon.ExceptionWithCode("failed to publish",innerException: ex);
+                throw ex;
+            }
+            catch (Exception ex)
+            {
+                throw new bootCommon.ExceptionWithCode("failed to publish to wordpress", innerException: ex);
             }
 
 

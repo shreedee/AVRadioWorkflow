@@ -10,5 +10,16 @@ namespace components.mediaList
         public override string fileType { get { return "Original"; } set { } }
 
         public AudioInfoModel info { get; set; }
+
+        public override string proccessedPath {
+            get {
+                if (string.IsNullOrWhiteSpace(path))
+                    return path;
+
+                var justfile = System.IO.Path.GetFileName(path);
+                return $"Final/{justfile}";
+            }
+            set { }
+        }
     }
 }

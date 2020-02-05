@@ -10,7 +10,16 @@ namespace components.mediaList
     [JsonConverter(typeof(MediaFileBaseConverter))]
     public class MediaFileBaseModel
     {
+        /// <summary>
+        /// where the  original uploaded file is
+        /// </summary>
         public string path { get; set; }
+
+        /// <summary>
+        /// Subtypes can cnahge if the final file should be found somewhere else
+        /// </summary>
+        public virtual string proccessedPath { get { return path; } set { } }
+
 
         public string objectType { get { return this.GetType().Name; } set { } }
 
@@ -22,6 +31,8 @@ namespace components.mediaList
         public string title { get; set; }
 
         public string fileName { get; set; }
+
+        
     }
 
     public class MediaFileBaseConverter : JsonConverter

@@ -20,6 +20,7 @@ using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Processing;
 using SixLabors.ImageSharp.Formats;
 using NAudio.Wave;
+using CustomExtensions;
 
 namespace components.mediaList
 {
@@ -43,6 +44,10 @@ namespace components.mediaList
         Task<Stream> getStreamAsync(string publicPathORkey);
         Task<Stream> getImageStream(string publicPathORkey, int width);
         Task<AudioInfoModel> getAudioInfoAsync(string publicPathORkey);
+        Task<bool> keyExists(string publicPathORkey);
+
+        Task deleteFolderAsync(string publicPathORkey);
+        Task copyFolderAsync(string from, string to);
     }
 
 
@@ -319,6 +324,94 @@ e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
 
         #endregion
 
+
+        public async Task deleteFolderAsync(string publicPathORkey)
+        {
+            var source = getStorageKey(getKey(publicPathORkey.Trim('/')));
+
+            using (var s3Client = createS3Client())
+            {
+                while (true)
+                {
+                    var res = await s3Client.ListObjectsV2Async(new ListObjectsV2Request
+                    {
+                        BucketName = _uploadConfig.bucket,
+                        Prefix = source,
+                    });
+
+                    if (0 == res.KeyCount)
+                        break;
+
+                    await s3Client.DeleteObjectsAsync(new DeleteObjectsRequest
+                    {
+                        BucketName = _uploadConfig.bucket,
+                        Objects = res.S3Objects.Select(o=> new KeyVersion {Key=o.Key}).ToList()
+                    });
+                }
+
+            }
+        }
+
+        public async Task copyFolderAsync(string from, string to)
+        {
+            var source = getStorageKey(getKey(from.Trim('/')));
+            var destination = getStorageKey(getKey(to.Trim('/')));
+
+            using (var s3Client = createS3Client())
+            {
+                string ContinuationToken = null;
+                while (true) {
+                    var res = await s3Client.ListObjectsV2Async(new ListObjectsV2Request
+                    {
+                        BucketName = _uploadConfig.bucket,
+                        Prefix = source,
+                        ContinuationToken = ContinuationToken
+                    });
+
+
+                    var done = await Task.WhenAll(res.S3Objects.Select(async o =>
+                    {
+
+                        var fileDestination = o.Key.ReplaceInBegining(source, destination);
+
+                        if (o.Key == fileDestination)
+                            return true;
+
+                        await s3Client.CopyObjectAsync(
+                            _uploadConfig.bucket, o.Key,
+                            _uploadConfig.bucket, fileDestination
+                        );
+
+                        return true;
+                    }));
+
+                    if (string.IsNullOrWhiteSpace(res.ContinuationToken))
+                    {
+                        break;
+                    }
+                    else
+                    {
+                        ContinuationToken = res.ContinuationToken;
+                    }
+                }
+
+            }
+        }
+
+        public async Task<bool> keyExists(string publicPathORkey)
+        {
+            var key = getKey(publicPathORkey);
+            using (var s3Client = createS3Client())
+            {
+                var res = await s3Client.ListObjectsV2Async(new ListObjectsV2Request
+                {
+                    BucketName = _uploadConfig.bucket,
+                    Prefix = getStorageKey(key)
+                });
+
+                return res.KeyCount > 0;
+            }
+        }
 
         public async Task<Stream> getImageStream(string publicPathORkey, int width)
         {

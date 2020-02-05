@@ -3,6 +3,8 @@
 import Spinner from './spinner';
 import { IAsyncResult } from './asyncStateMiddleware';
 
+import './styles.scss';
+
 interface IAsyncLoaderProps<T> {
     children: any; //PropTypes.node;
     prompt: string;
@@ -34,7 +36,7 @@ export function checkFetchError(response) {
 export const AsyncError :React.SFC<{prompt:string, asyncResult: IAsyncResult<any>}> = ({asyncResult, prompt}) =>{
 
     return (asyncResult && asyncResult.error)?
-                    <strong className="text-danger">
+                    <strong className="text-danger asyncError">
                         Failed {prompt + ' - '}
                         {asyncResult && (asyncResult.error.Message ? asyncResult.error.Message : asyncResult.error.toString())}
                     </strong>:null

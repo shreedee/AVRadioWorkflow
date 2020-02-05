@@ -15,6 +15,17 @@ namespace CustomExtensions
 {
     public  static partial class UtilityExtensions
     {
+
+        public static string ReplaceInBegining(this string input,string pattern,  string toReplace)
+        {
+            if (!input.StartsWith(pattern))
+                return input;
+
+            var restOfIt = input.Substring(pattern.Length);
+
+            return toReplace+ restOfIt;
+        }
+
         public static string GetUserId(this IHttpContextAccessor httpContextAccessor)
         {
             return GetUserId(httpContextAccessor.HttpContext);

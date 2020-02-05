@@ -52,10 +52,11 @@ class PubliMeView extends React.PureComponent<ConnectedProps & ComponentProps & 
 
     render() {
 
-        const { folderDetails, dispatch, createOptions, displayData } = this.props;
-
+        const { folderDetails, dispatch, createOptions, displayData, history } = this.props;
     
         const publishDetails = folderDetails && folderDetails.publishDetails;
+        const publishedLink = folderDetails && folderDetails.publishedLink;
+
 
         return <div className="folderCreator">
 
@@ -64,10 +65,16 @@ class PubliMeView extends React.PureComponent<ConnectedProps & ComponentProps & 
             </Alert>
             }
 
+            {publishedLink && <Alert variant="primary">
+                Last <Alert.Link href={publishedLink.wpLink}> published</Alert.Link> @{publishedLink.lastModified}
+            </Alert>}
+
             <Form
                 onSubmit={async e => {
                     e.preventDefault();
-                    await dispatch(ensureCreator().publish());
+                    const savedFolder = await dispatch(ensureCreator().publish());
+                    await dispatch(ensureCreator().loadStuff(savedFolder as string));
+                    history.push(`/publiMe?filename=${encodeURIComponent(savedFolder)}`);
                 }}
             >
 
@@ -214,7 +221,9 @@ class PubliMeView extends React.PureComponent<ConnectedProps & ComponentProps & 
                         <Button variant="info"
                             onClick={() => dispatch(ensureCreator().saveCurrentChanges())}
                         >Save folder</Button>
-                    <Button type="submit" variant="primary">PUBLISH</Button>
+                        <Button type="submit" variant="primary">
+                            {publishedLink && 'Re'} PUBLISH
+                        </Button>
                 </ButtonToolbar>
                 </div>
 
