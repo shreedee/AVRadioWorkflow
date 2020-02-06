@@ -16,10 +16,19 @@ namespace components.mediaList
                 if (string.IsNullOrWhiteSpace(path))
                     return path;
 
-                var justfile = System.IO.Path.GetFileName(path);
-                return $"Final/{justfile}";
+                var justfile = System.IO.Path.GetFileNameWithoutExtension(path);
+                var ext = System.IO.Path.GetExtension(path).Trim('.');
+                return $"Final/{justfile}_ed.{ext}";
             }
             set { }
         }
+
+        /*
+        public override string getStorageName(string fileName, string folderpath)
+        {
+            return fileName;
+        }
+        */
+
     }
 }

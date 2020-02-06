@@ -32,6 +32,17 @@ namespace components.mediaList
 
         public string fileName { get; set; }
 
+        /// <summary>
+        /// give an inputFilename, get the filename this object shoud be store as
+        /// </summary>
+        /// <param name="fileName"></param>
+        /// <param name="folderpath"></param>
+        /// <returns></returns>
+        public virtual string getStorageName(string fileName, string folderpath)
+        {
+            return fileName;
+        }
+
         
     }
 

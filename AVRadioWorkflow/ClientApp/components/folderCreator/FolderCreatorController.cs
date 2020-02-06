@@ -222,7 +222,34 @@ namespace components.folderCreator
 
             foreach(var t in templatemap.Values)
             {
-                await _storage.copyObjectAsync(t, $"{data.savedFolder}/{Path.GetFileName(t)}");
+                var templatFileName = Path.GetFileName(t);
+
+                var ext = Path.GetExtension(templatFileName).Trim('.');
+
+                if("rpp" == ext)
+                {
+                    var rppData = await _storage.readAsync(t);
+                    await Task.WhenAll(data.publishDetails.mediaFiles.Where(f => f is mediaList.AuViFileModel).Select(async f =>
+                    {
+                        var justfileName = Path.GetFileNameWithoutExtension(f.fileName);
+
+                        var rppDataEdited = rppData.Replace(@"\\aleph\playground\Mix",$"Final");
+                        await _storage.SaveStream(
+                            $"{data.savedFolder}/{justfileName}.rpp",
+                            new MemoryStream(Encoding.UTF8.GetBytes(rppDataEdited)));
+
+                        //await _storage.copyObjectAsync(t, $"{data.savedFolder}/{justfileName}.rpp");
+
+                    }));
+
+                }
+                else
+                {
+                    await _storage.copyObjectAsync(t, $"{data.savedFolder}/{templatFileName}");
+                }
+
+
+                
             }
 
             //create the FinalFolder With dummey status

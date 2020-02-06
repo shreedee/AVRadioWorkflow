@@ -96,19 +96,17 @@ namespace components.mediaList
             {
                 case "image":
                     mediafile = new ImageFileModel();
-                    mediafile.fileName = fileName;
                     break;
                 case "audio":
                 case "video":
                     mediafile = new AuViFileModel();
-                    mediafile.fileName = $"{orgFolderPath}_{fileName}";
                     break;
                 default:
                     mediafile = new OtherFileModel();
-                    mediafile.fileName = fileName;
                     break;
             }
 
+            mediafile.fileName = mediafile.getStorageName(fileName, orgFolderPath);
             mediafile.path = $"{mediafile.fileType}/{mediafile.fileName}";
 
 
