@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -12,9 +13,17 @@ namespace components.login
     public class AuthController : Controller
     {
         readonly string _wp_url;
-        public AuthController(IConfiguration configuration)
+
+        readonly ILogger _logger;
+
+        public AuthController(
+            IConfiguration configuration,
+            ILogger<AuthController> logger
+
+            )
         {
             _wp_url = configuration["wordpress:url"];
+            _logger = logger;
         }
 
         [HttpPost]
@@ -22,23 +31,47 @@ namespace components.login
         {
             try
             {
-                var client = new WordPressClient($"{_wp_url}/wp-json/");
+                var client = creatWPClient($"{_wp_url}/wp-json/", _logger);
                 client.AuthMethod = WordPressPCL.Models.AuthMethod.JWT;
+
                 await client.RequestJWToken(creds.username, creds.pwd);
 
                 if (!(await client.IsValidJWToken()))
-                    throw new Exception("invalid token");
+                    throw new bootCommon.ExceptionWithCode("JWT token is not valid");
 
                 return client.GetToken();
             }
-            catch(Exception ex)
+            catch (bootCommon.ExceptionWithCode ex)
+            {
+                throw ex;
+            }
+            catch (Exception ex)
             {
                 throw new bootCommon.ExceptionWithCode("invalid login credentials", innerException:ex);
             }
 
         }
 
-        public static async Task<WordPressClient>InitWP(string wp_url, Microsoft.AspNetCore.Http.HttpRequest Request)
+
+        public static WordPressClient creatWPClient(string url, ILogger _logger)
+        {
+            var client = new WordPressClient(url);
+            client.AuthMethod = WordPressPCL.Models.AuthMethod.JWT;
+
+            client.HttpResponsePreProcessing = (res) =>
+            {
+                _logger.LogInformation($"WP says : {res}");
+                Console.WriteLine($"WP says : {res}");
+                return res;
+            };
+
+
+            return client;
+
+        }
+
+
+        public static async Task<WordPressClient>InitWP(string wp_url, Microsoft.AspNetCore.Http.HttpRequest Request, ILogger _logger)
         {
             var accessToken = Request.Headers["Authorization"];
             if (string.IsNullOrWhiteSpace(accessToken))
@@ -48,13 +81,13 @@ namespace components.login
             if (string.IsNullOrWhiteSpace(jwt))
                 throw new bootCommon.ExceptionWithCode("invalid login credentials");
 
-            var client = new WordPressClient($"{wp_url}/wp-json/");
+            var client = creatWPClient($"{wp_url}/wp-json/", _logger);
             client.AuthMethod = WordPressPCL.Models.AuthMethod.JWT;
 
             client.SetJWToken(jwt);
 
             if (!(await client.IsValidJWToken()))
-                throw new bootCommon.ExceptionWithCode("invalid login credentials");
+                throw new bootCommon.ExceptionWithCode("invalid login token");
 
             return client;
 
@@ -63,7 +96,7 @@ namespace components.login
         [HttpGet]
         public async Task checkJWT()
         {
-            await InitWP(_wp_url, Request);
+            await InitWP(_wp_url, Request, _logger);
         }
     }
 }

@@ -30,7 +30,7 @@ namespace components.folderCreator
                 if (string.IsNullOrWhiteSpace(data.publishDetails.bodyText))
                     throw new bootCommon.ExceptionWithCode("bodyText is empty");
 
-                var client = await login.AuthController.InitWP(_wp_url, Request);
+                var client = await login.AuthController.InitWP(_wp_url, Request, _logger);
 
 
                 var imagesToUpload = data.publishDetails.mediaFiles.Where(f => f is mediaList.ImageFileModel && ((mediaList.ImageFileModel)f).canPublish).ToArray();
@@ -79,22 +79,27 @@ namespace components.folderCreator
 
                 await SaveFolderAsync(data);
 
-                var uploadedMedia = await Task.WhenAll(allFileToUpload.Select(async (image, i) =>
+                //var uploadedMedia = await Task.WhenAll(allFileToUpload.Select(async (image, i) =>
+                //fails cause of the rate limited need to put 1 sec delays
+
+                var uploadedMedia = allFileToUpload.Select((image, i) =>
                 {
                     var ext = System.IO.Path.GetExtension(image.fileName).Trim('.');
 
                     var imageStream = (image is mediaList.ImageFileModel) ?
-                        await _storage.getImageStream($"{data.savedFolder}/{image.proccessedPath}", 800)
-                        : await _storage.getStreamAsync($"{data.savedFolder}/{image.proccessedPath}");
+                         _storage.getImageStream($"{data.savedFolder}/{image.proccessedPath}", 800).Result
+                        :  _storage.getStreamAsync($"{data.savedFolder}/{image.proccessedPath}").Result;
 
-                    var uploaded = await client.Media.Create(imageStream, $"{data.publishDetails.title}_{i}.{ext}");
+                    var uploaded = client.Media.Create(imageStream, $"{data.publishDetails.title}_{i}.{ext}").Result;
+
+                    Task.Delay(TimeSpan.FromSeconds(3)).Wait();
 
                     uploaded.Post = thePost.Id;
 
-                    uploaded = await client.Media.Update(uploaded);
+                    uploaded = client.Media.Update(uploaded).Result;
 
                     return new { image, uploaded };
-                }));
+                });
 
 
                 var image_gallery = uploadedMedia.Where(f => f.image is mediaList.ImageFileModel)
