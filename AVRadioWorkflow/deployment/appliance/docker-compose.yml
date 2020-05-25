@@ -9,41 +9,32 @@ services:
     ports:
       - 9000:9000
     volumes:
-      - /data:/data
+      - /radiodata/playground:/data
     environment:
       MINIO_ACCESS_KEY: DCFO7M7ZJR4Q681U2DUH
       MINIO_SECRET_KEY: PatXGqpsPyqvgpMd+1w+S3mD6HMiq8mfTxPz8jbD
       MINIO_REGION: us-east-1
       MINIO_HTTP_TRACE: /logs.txt
     command: server /data
-    networks:
-      - backend   
 
   avradio: 
-    image: labizbille/avradioworkflow:1.0.1.0
+    image: labizbille/avradioworkflow:1.1.0.2
     restart: unless-stopped
     ports:
       - 80:80
     volumes:
-      - /workflow/appsettings.createOptions.json:/app/appsettings.CreateOptions.json
+      - ./appsettings.createOptions.json:/app/appsettings.CreateOptions.json
+      - /radiodata/playground:/playground
+      
     environment:
-      - "mediaLocations__articles=radio_workflow_folders"
-      - "mediaLocations__templates=radioworkflow_templates"
-      - "mediaLocations__afterPublish__0=radioprogram_published"
+      - "mediaLocations__articlesRoot=RadioWorkflow"
+      - "mediaLocations__playgroundFolder=/playground"
+      - "mediaLocations__templates=/playground/radioworkflow_templates"
 
       - "s3Storage__accesskey=DCFO7M7ZJR4Q681U2DUH"
       - "s3Storage__secretkey=PatXGqpsPyqvgpMd+1w+S3mD6HMiq8mfTxPz8jbD"
-      - "s3Storage__bucket=avradioworkflow"
+      
       - "s3Storage__region=us-east-1"
-      - "s3Storage__customEndpoint=http://192.168.10.38:9000"
+      - "s3Storage__customEndpoint=http://192.168.10.13:9000"
       - "s3Storage__endPointHttp=true"
-      - "s3Storage__filesystemLink=\\\\192.168.8.14\\playground\\avradioworkflow"
-
-      - "wordpress__url=https://www.aurovilleradio.org"
-
-    networks:
-      - backend   
-
-networks:
-  backend:
 

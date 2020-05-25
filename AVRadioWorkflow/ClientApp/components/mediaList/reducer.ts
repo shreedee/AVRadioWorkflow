@@ -41,6 +41,8 @@ type myActions = {
 
     addRemoveMedia: (galleyId: string, list: MediaFileBaseModel[], remove?: boolean) => { galleyId: string, list: MediaFileBaseModel[], remove?: boolean };
 
+    updateMediaObject: (galleyId: string, newObject: MediaFileBaseModel) => { galleyId: string, newObject: MediaFileBaseModel};
+
     clearList: (galleyId: string) => string;
 
     setDragOver: (galleyId: string, value: boolean) => { galleyId: string, value: boolean };
@@ -68,6 +70,9 @@ class galleryReducer extends ReducerBase<IMediaFilesState, myActions>{
         return {
             addRemoveFiles: (galleyId: string, images: File[], remove?: boolean) => ({ galleyId, images, remove }),
             addRemoveMedia: (galleyId: string, list: MediaFileBaseModel[], remove?: boolean) => ({ galleyId, list, remove }),
+
+            updateMediaObject: (galleyId: string, newObject: MediaFileBaseModel) => ({ galleyId, newObject}),
+
             clearList: (galleyId: string) => galleyId,
 
             setDragOver: (galleyId: string, value: boolean) => ({ galleyId, value }),
@@ -83,6 +88,24 @@ class galleryReducer extends ReducerBase<IMediaFilesState, myActions>{
         listHandlers[this._myActions.clearList.toString()] = (state, action: { payload: string }) => {
             const newState = _.clone(state || {}) as { [galleyId: string]: MediaObjects };
             delete newState[action.payload];
+            return newState;
+        }
+
+        listHandlers[this._myActions.updateMediaObject.toString()] = (state, action: { payload: { galleyId: string, newObject: MediaFileBaseModel } }) => {
+            const newState = _.clone(state || {}) as { [galleyId: string]: MediaObjects };
+
+            const { galleyId, newObject } = action.payload;
+
+            
+            const list = newState[galleyId] && newState[galleyId].mediaList && newState[galleyId].mediaList[newObject.objectType];
+
+            if (list) {
+                const foundIndex = _.findIndex(list, l => l.path == newObject.path);
+                if (-1 != foundIndex) {
+                    list[foundIndex] = newObject;
+                }
+            }
+
             return newState;
         }
 
@@ -160,7 +183,7 @@ class galleryReducer extends ReducerBase<IMediaFilesState, myActions>{
 
     addRemoveFiles(galleyId: string, images: File[], remove?: boolean, imageSaver?: (files: File[]) => PromiseLike<MediaFileBaseModel[]>) {
         return async (dispatch, getState) => {
-
+            
             if (!remove && !!imageSaver) {
                 const imageList = await imageSaver(images);
                 dispatch(this._myActions.addRemoveMedia(galleyId, imageList));
@@ -171,8 +194,8 @@ class galleryReducer extends ReducerBase<IMediaFilesState, myActions>{
         };
     }
    
-    addRemoveMedia (galleyId: string, list: MediaFileBaseModel[], remove?: boolean, remover?: (listf: MediaFileBaseModel[]) => void) {
-
+    addRemoveMedia(galleyId: string, list: MediaFileBaseModel[], remove?: boolean, remover?: (listf: MediaFileBaseModel[]) => void) {
+        
         return async (dispatch, getState) => {
             if (remove && remover)
                 dispatch(remover(list));
@@ -181,6 +204,8 @@ class galleryReducer extends ReducerBase<IMediaFilesState, myActions>{
         };
         
     }
+
+    updateMediaObject = (galleyId: string, newObject: MediaFileBaseModel) => this._myActions.updateMediaObject(galleyId, newObject);
 
     selectObjectType = (value?: string) => this._myActions.selectObjectType(value);
 
@@ -193,7 +218,7 @@ class galleryReducer extends ReducerBase<IMediaFilesState, myActions>{
             let uploadWaitBox: string = null;
             let mediaFiles: MediaFileBaseModel[] = null;
 
-            let filesystemLink: string = null;
+            let filesystemLink: string = '';
             let savedFolder: string = null;
 
             const waiter = dispatch(ensureWaitBox().InitWait('uploading files', (async () => {
@@ -227,7 +252,7 @@ class galleryReducer extends ReducerBase<IMediaFilesState, myActions>{
 
                     //we will set this few times no isses
                     savedFolder = uploadData.rootFolder;
-                    filesystemLink = `${uploadData.config.filesystemLink}/${savedFolder}`;
+                    //filesystemLink = `${uploadData.config.filesystemLink}/${savedFolder}`;
 
                     const uploader = await Evaporate.create(_.assign(uploadData.config, {
 

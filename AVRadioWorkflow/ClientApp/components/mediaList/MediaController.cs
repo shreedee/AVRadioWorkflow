@@ -25,8 +25,8 @@ namespace components.mediaList
     {
         readonly ILogger _logger;
         readonly IStorageService _storage;
-        readonly string _articlesRoot;
-        
+        readonly folderCreator.MediaLocations _mediaLocations;
+
         public MediaController(
             IStorageService storage,
             IConfiguration configuration,
@@ -35,14 +35,18 @@ namespace components.mediaList
         {
             _logger = logger;
             _storage = storage;
-            _articlesRoot = configuration["mediaLocations:articles"];
+
+            _mediaLocations = configuration.GetSection("mediaLocations").Get<folderCreator.MediaLocations>();
+            if (null == _mediaLocations)
+                throw new Exception("config mediaLocations not found");
+
         }
 
-        
+
         readonly static Regex _filenameRegex = new Regex(@"[^a-zA-Z0-9\.]");
         readonly static Regex _pathRegex = new Regex(@"[^a-zA-Z0-9/\.]");
 
-        readonly static string[] _supportedImages = new[] {"png","jpg","jpeg","gif" };
+        
 
         /// <summary>
         /// For this controller the client decides whihc path to put this file in 
@@ -67,8 +71,8 @@ namespace components.mediaList
 
             var orgFolderPath = folderpath = _pathRegex.Replace(folderpath, "_");
 
-            if (!folderpath.StartsWith(_articlesRoot))
-                folderpath = $"{_articlesRoot}/{folderpath}";
+            if (!folderpath.StartsWith(_mediaLocations.articlesRoot))
+                folderpath = $"{_mediaLocations.articlesRoot}/{folderpath}";
 
             /*
             fileName = fileName.Replace(' ', '_');
@@ -78,66 +82,41 @@ namespace components.mediaList
             folderpath = string.Join("_", folderpath.Split(Path.GetInvalidPathChars()));
             */
             
-            var mediaSplit = fileType.Split('/');
-            if (mediaSplit.Length != 2)
-                throw new bootCommon.ExceptionWithCode($"fileType : {fileType} is invalid");
-
-            var mediaType = mediaSplit[0];
-            if("image"== mediaType)
-            {
-                if (!_supportedImages.Contains(mediaSplit[1].ToLower()))
-                {
-                    mediaType = "other";
-                }
-            }
-
-            MediaFileBaseModel mediafile = null;
-            switch (mediaType)
-            {
-                case "image":
-                    mediafile = new ImageFileModel();
-                    break;
-                case "audio":
-                case "video":
-                    mediafile = new AuViFileModel();
-                    break;
-                default:
-                    mediafile = new OtherFileModel();
-                    break;
-            }
-
-            mediafile.fileName = mediafile.getStorageName(fileName, orgFolderPath);
-            mediafile.path = $"{mediafile.fileType}/{mediafile.fileName}";
-
+            var mediafile2 = MediaFileBaseModel.mediaObjectFromMimeType(fileType, fileName) ;
+            
 
             var ret = new DirectUploadModel
             {
-                mediaFile = mediafile,
+                mediaFile = mediafile2,
                 config = _storage.uploadConfig,
                 rootFolder = folderpath
             };
 
-            var fullPath = $"{folderpath}/{mediafile.path}";
 
-            _logger.LogDebug($"newPageidForUploadAsync: new page {fullPath}");
+            var storageKey = StorageService.getStorageKey($"{folderpath}/{mediafile2.path}");
+
+            _logger.LogDebug($"newPageidForUploadAsync: new page {storageKey.bucket}:{storageKey.key}");
+
+            ret.config.bucket = storageKey.bucket;
+
 
             if (createSignedURL)
             {
-                if (!string.IsNullOrWhiteSpace(_storage.uploadConfig.aws_url))
+                if (!string.IsNullOrWhiteSpace(_storage.uploadConfig.customEndpoint))
                 {
                     //we are using minio.. set up 
                     var origin = this.originFromURL("/api/media");
 
-                    ret.keyForDirectUpload = _storage.createPresignedUrl(fullPath, true, origin);
+                    ret.keyForDirectUpload = _storage.createPresignedUrl(storageKey.key, true, origin);
                 }
                 else
                 {
-                    ret.keyForDirectUpload = _storage.createPresignedUrl(fullPath, true);
+                    ret.keyForDirectUpload = _storage.createPresignedUrl(storageKey.key, true);
                 }
             }
             else
             {
-                ret.keyForDirectUpload = _storage.keyForDirectUpload(fullPath);
+                ret.keyForDirectUpload = _storage.keyForDirectUpload(storageKey.key);
             }
 
             return ret;

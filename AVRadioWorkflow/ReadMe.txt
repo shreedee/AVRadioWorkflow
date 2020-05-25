@@ -10,6 +10,8 @@ Make sure to downgrade NODE before you downgrade NPM. else npm will have issues 
 npm install -g node@10.15.3
 npm install -g npm@3.10.7
 
+npm install -g npm@6.4.1
+
 
 #after getting the project for the first time (or after getting updates ) from SVN
 a) remeber to do npm install

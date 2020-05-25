@@ -33,17 +33,68 @@ namespace components.mediaList
         public string fileName { get; set; }
 
         /// <summary>
-        /// give an inputFilename, get the filename this object shoud be store as
+        /// if it's possible to publish
         /// </summary>
-        /// <param name="fileName"></param>
-        /// <param name="folderpath"></param>
-        /// <returns></returns>
-        public virtual string getStorageName(string fileName, string folderpath)
+        virtual public bool canPublish { get; set; }
+
+        /// <summary>
+        /// User can set this flag to supress something from getting published
+        /// </summary>
+        virtual public bool doNotPublish { get; set; }
+
+
+        public readonly static string[] SupportedImagesTypes = new[] { "png", "jpg", "jpeg", "gif" };
+
+        public readonly static string[] SupportedAVTypes = new[] { "mp3", "mp4", "avi", "wav", "mpeg" };
+
+
+        public static MediaFileBaseModel NewMediaFileFromMediaType(string mediaType, string fileName)
         {
-            return fileName;
+            MediaFileBaseModel mediafile = null;
+
+            switch (mediaType)
+            {
+                case "image":
+                case "Images":
+                    mediafile = new ImageFileModel();
+                    break;
+                case "Original":
+                case "audio":
+                case "video":
+                    mediafile = new AuViFileModel();
+                    break;
+                case "Final":
+                    mediafile = new FinalAvFileModel();
+                    break;
+                default:
+                    mediafile = new OtherFileModel();
+                    break;
+            }
+
+            mediafile.fileName = fileName;
+            mediafile.path = $"{mediafile.fileType}/{mediafile.fileName}";
+
+            return mediafile;
         }
 
-        
+        public static MediaFileBaseModel mediaObjectFromMimeType(string mimeType, string fileName)
+        {
+            var mediaSplit = mimeType.Split('/');
+            if (mediaSplit.Length != 2)
+                throw new bootCommon.ExceptionWithCode($"fileType : {mimeType} is invalid");
+
+            var mediaType = mediaSplit[0];
+            if ("image" == mediaType)
+            {
+                if (!MediaFileBaseModel.SupportedImagesTypes.Contains(mediaSplit[1].ToLower()))
+                {
+                    mediaType = "other";
+                }
+            }
+
+            return NewMediaFileFromMediaType(mediaType, fileName);
+
+        }
     }
 
     public class MediaFileBaseConverter : JsonConverter

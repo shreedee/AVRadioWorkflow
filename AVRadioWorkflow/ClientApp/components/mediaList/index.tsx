@@ -1,7 +1,9 @@
 ﻿import * as React from 'react';
-import { FormControl, ListGroup, Button, OverlayTrigger, Tooltip, Card, Accordion, Badge, Image } from 'react-bootstrap';
+import { FormControl, ListGroup, Button, OverlayTrigger, Tooltip, Card, Accordion, Badge, Image, FormCheck } from 'react-bootstrap';
 
 import ensureMedia, { IMediaFilesState } from './reducer';
+
+import ensureCreator from '../folderCreator/reducer';
 
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faFileArchive } from '@fortawesome/free-solid-svg-icons';
@@ -112,40 +114,63 @@ const MediaListView: React.SFC<ComponentProps & ConnectedProps & { dispatch }> =
                     <Accordion.Collapse eventKey={mediaParts[mp][0].objectType}>
                         <Card.Body>
                             <ListGroup >
-                                {mediaParts[mp].map((f, i) => <ListGroup.Item key={i}
-                                    variant={('ImageFileModel' == f.objectType && !(f as ImageFileModel).canPublish) ? 'danger':null}>
+                                {mediaParts[mp].map((f, i) => {
 
-                                    <div className="d-flex">
-                                        {(() => {
-                                            switch (f.objectType) {
-                                                case 'ImageFileModel':
-                                                    return <div className="d-flex" >
+                                    let variant = null;
+                                    if (f.canPublish) {
+                                        if ( !f.doNotPublish) {
+                                            variant = 'success';
+                                        }
+                                    } else {
+                                        if ('ImageFileModel' == f.objectType) {
+                                            variant = 'danger';
+                                        }
+                                            
+                                    }
 
-                                                        {rootPath && <div style={{ height: 100, width: 100 }}>
-                                                            <Image src={`${rootPath}/${f.path}`} fluid />
-                                                        </div>
-                                                        }
+                                    return <ListGroup.Item key={i}
+                                        variant={variant}>
 
-                                                        <div className="fileDisplay">
-                                                            <div>{f.fileName}</div>
-                                                            {!(f as ImageFileModel).canPublish && <div className="text-muted">incorrect aspect ratio</div>}
-                                                        </div>
-                                                    </div>;
-                                                default:
-                                                    return <div className="fileDisplay">
-                                                        {f.fileName}
-                                                    </div>;
-                                            }
-                                        })()}
-                                        
-                                        <div className="ml-auto">
-                                            <Button title="remove file" variant="danger" size="sm"
-                                                onClick={() => dispatch(ensureMedia().addRemoveMedia(galleryId, [f], true, imageSaver && imageSaver.remover))}
-                                            >X</Button>
+                                        <div className="d-flex">
+                                            {(() => {
+                                                switch (f.objectType) {
+                                                    case 'ImageFileModel':
+                                                        return <div className="d-flex" >
+
+                                                            {rootPath && <div style={{ height: 100, width: 100 }}>
+                                                                <Image src={`${rootPath}/${f.path}`} fluid />
+                                                            </div>
+                                                            }
+
+                                                            <div className="fileDisplay">
+                                                                <div>{f.fileName}</div>
+                                                                {!(f as ImageFileModel).canPublish && <div className="text-muted">incorrect aspect ratio</div>}
+                                                            </div>
+                                                        </div>;
+                                                    default:
+                                                        return <div className="fileDisplay">
+                                                            {f.fileName}
+                                                        </div>;
+                                                }
+                                            })()}
+
+                                            <div className="ml-auto">
+
+                                                {f.canPublish && <FormCheck inline  type="checkbox" label="Do NOT publish"
+                                                    checked={f.doNotPublish}
+                                                    onClick={() => dispatch(ensureCreator().toggglePublish(f.path))}
+                                                    onChange={() => { }}
+                                                />}
+
+                                                <Button title="remove file" variant="danger" size="sm"
+                                                    onClick={() => dispatch(ensureMedia().addRemoveMedia(galleryId, [f], true, imageSaver && imageSaver.remover))}
+                                                    
+                                                >X</Button>
+                                            </div>
                                         </div>
-                                    </div>
 
-                                </ListGroup.Item>)}
+                                    </ListGroup.Item>;
+                                })}
                             </ListGroup>
                         </Card.Body>
                     </Accordion.Collapse>
@@ -176,6 +201,7 @@ const MediaListView: React.SFC<ComponentProps & ConnectedProps & { dispatch }> =
 };
 
 import { connect } from 'react-redux';
+
 
 export default connect<ConnectedProps, { dispatch }, ComponentProps>((state) => {
     return ensureMedia().getCurrentState(state);

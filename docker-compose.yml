@@ -9,7 +9,7 @@ services:
     ports:
       - 9002:9000
     volumes:
-      - C:\tmp\avWorkflowdata:/data
+      - C:\tmp\avWorkflowdata\playground:/data
     environment:
       MINIO_ACCESS_KEY: DCFO7M7ZJR4Q681U2DUH
       MINIO_SECRET_KEY: PatXGqpsPyqvgpMd+1w+S3mD6HMiq8mfTxPz8jbD

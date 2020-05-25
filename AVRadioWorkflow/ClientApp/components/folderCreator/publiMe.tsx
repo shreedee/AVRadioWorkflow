@@ -24,6 +24,10 @@ const ReactQuill = _ReactQuill as any;
 import 'react-quill/dist/quill.snow.css';
 
 import ToggleButton from 'react-toggle-button';
+import { PublishedLinkModel } from '../../generated/PublishedLinkModel';
+
+import { PublishStatusModel } from '../../generated/PublishStatusModel';
+import moment from 'moment';
 
 
 type ConnectedProps = ICreatorState;
@@ -52,10 +56,10 @@ class PubliMeView extends React.PureComponent<ConnectedProps & ComponentProps & 
 
     render() {
 
-        const { folderDetails, dispatch, createOptions, displayData, history } = this.props;
+        const { folderDetails, dispatch, createOptions, displayData, history,  } = this.props;
     
         const publishDetails = folderDetails && folderDetails.publishDetails;
-        const publishedLink = folderDetails && folderDetails.publishedLink;
+        const publishedLink :PublishedLinkModel = null;//folderDetails && folderDetails.publishedLink;
 
 
         return <div className="folderCreator">
@@ -216,15 +220,35 @@ class PubliMeView extends React.PureComponent<ConnectedProps & ComponentProps & 
             </Row>
 
 
-            <div className="footer">
-                <ButtonToolbar className="justify-content-between">
+                <div className="footer">
+
+                    {((folderDetails && folderDetails.publishedActions) || []).map((a, i) => <ul key={i}>
+                        <li>{a.message} @ {moment(a.lastModified).format('LLLL')}</li>
+                    </ul>)
+                    }
+
+                    <ButtonToolbar className="justify-content-between">
+
                         <Button variant="info"
                             onClick={() => dispatch(ensureCreator().saveCurrentChanges())}
                         >Save folder</Button>
+
+                    
+                    {(folderDetails && folderDetails.publishStatus == PublishStatusModel.notPublished) ?
                         <Button type="submit" variant="primary">
-                            {publishedLink && 'Re'} PUBLISH
+                            PUBLISH
                         </Button>
-                </ButtonToolbar>
+                            :
+                        <Button type="submit" variant="primary">
+                                Update PUBLISH request
+                        </Button>
+
+                    
+                    }
+
+                    </ButtonToolbar>
+                        
+                
                 </div>
 
             </Form>
@@ -234,6 +258,7 @@ class PubliMeView extends React.PureComponent<ConnectedProps & ComponentProps & 
 }
 
 import { connect } from 'react-redux';
+
 
 export default withRouter(connect<ConnectedProps, { dispatch }, {}>((state) => {
     return ensureCreator().getCurrentState(state);

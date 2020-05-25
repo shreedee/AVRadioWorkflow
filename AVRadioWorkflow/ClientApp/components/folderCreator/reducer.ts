@@ -90,6 +90,33 @@ class creatorReducer extends ReducerBase<ICreatorState, myActions>{
 
     }
 
+    toggglePublish(filePath: string) {
+        const _mine = this;
+        return async (dispatch, getState) => {
+
+            const { folderDetails } = _mine.getCurrentState(getState());
+
+            const mediaFiles = _.clone(folderDetails && folderDetails.publishDetails && folderDetails.publishDetails.mediaFiles || []);
+
+            const foundIndex = _.findIndex(mediaFiles, f => f.path == filePath);
+            
+            if (-1 == foundIndex) {
+                console.error(`path ${filePath} not found in list`);
+                return;
+            }
+
+            const newF = _.clone(mediaFiles[foundIndex]);
+            newF.doNotPublish = !newF.doNotPublish;
+
+            mediaFiles[foundIndex] = newF;
+
+            dispatch(_mine.updatePublishProps('mediaFiles', mediaFiles));
+
+            dispatch(ensureMedia().updateMediaObject('folderCreator', newF))
+        };
+    
+    }
+
     removeMedia(list: MediaFileBaseModel[]) {
         const _mine = this;
         return async (dispatch, getState) => {
@@ -126,7 +153,7 @@ class creatorReducer extends ReducerBase<ICreatorState, myActions>{
         return async (dispatch, getState) => {
             await dispatch(_mine.saveCurrentChanges());
 
-            const jwt = await dispatch(ensureLogin().ensureSignedIn());
+            //const jwt = await dispatch(ensureLogin().ensureSignedIn());
 
             let statusFile = '';
             await dispatch(ensureWaitBox().doWaitAsync('publishing', async () => {
@@ -137,7 +164,7 @@ class creatorReducer extends ReducerBase<ICreatorState, myActions>{
                     method: 'post',
                     headers: {
                         'Content-Type': 'application/json',
-                        Authorization: 'Bearer ' + jwt
+                        //Authorization: 'Bearer ' + jwt
                     },
                     body: JSON.stringify(folderDetails)
                 }))).text();

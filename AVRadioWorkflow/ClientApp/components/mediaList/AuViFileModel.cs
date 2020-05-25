@@ -11,24 +11,11 @@ namespace components.mediaList
 
         public AudioInfoModel info { get; set; }
 
-        public override string proccessedPath {
-            get {
-                if (string.IsNullOrWhiteSpace(path))
-                    return path;
-
-                var justfile = System.IO.Path.GetFileNameWithoutExtension(path);
-                var ext = System.IO.Path.GetExtension(path).Trim('.');
-                return $"Final/{justfile}_ed.{ext}";
-            }
-            set { }
-        }
-
-        /*
-        public override string getStorageName(string fileName, string folderpath)
-        {
-            return fileName;
-        }
-        */
+        override public bool canPublish { get=>false; set { } }
 
     }
+
+        
+
+
 }

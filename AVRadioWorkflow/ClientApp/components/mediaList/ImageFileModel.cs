@@ -13,7 +13,7 @@ namespace components.mediaList
 
         public ImageInfoModel imageInfo { get; set; }
 
-        public bool canPublish { get; set; }
+        
 
 
     }

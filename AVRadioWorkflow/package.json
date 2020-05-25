@@ -30,7 +30,7 @@
     "@fortawesome/fontawesome-svg-core": "^1.2.25",
     "@fortawesome/free-brands-svg-icons": "^5.12.0",
     "@fortawesome/free-solid-svg-icons": "^5.11.2",
-    "@fortawesome/react-fontawesome": "^0.1.6",
+    "@fortawesome/react-fontawesome": "^0.1.9",
     "@types/async-lock": "^1.1.1",
     "@types/jwt-decode": "^2.2.1",
     "@types/lodash": "^4.14.144",

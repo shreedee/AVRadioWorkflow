@@ -25,8 +25,17 @@ namespace components.folderCreator
         [bootCommon.ExportAsOptional]
         public PublishDetailsModel publishDetails { get; set; }
 
+        public PublishStatusModel publishStatus { get; set; }
+
         [bootCommon.ExportAsOptional]
-        public PublishedLinkModel publishedLink { get; set; }
+        public PublishedLinkModel[] publishedActions { get; set; }
+
+
+        public FolderDetailsModel()
+        {
+            publishStatus = PublishStatusModel.notPublished;
+            publishedActions = new PublishedLinkModel[] { };
+        }
 
     }
 }

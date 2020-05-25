@@ -63,6 +63,7 @@ namespace AVRadioWorkflow
 
                        var exception = context.Features.Get<IExceptionHandlerFeature>()?.Error;
 
+                       //internal aplication DONOT hide error
                        var error = bootCommon.ErrorMessage.SetStatusGetResult(context, exception, loggerFactory.CreateLogger("Global-Exception"));
                        context.Response.ContentType = "application/json";
 

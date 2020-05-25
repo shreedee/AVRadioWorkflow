@@ -21,6 +21,7 @@ using SixLabors.ImageSharp.Processing;
 using SixLabors.ImageSharp.Formats;
 using NAudio.Wave;
 using CustomExtensions;
+using Newtonsoft.Json;
 
 namespace components.mediaList
 {
@@ -33,11 +34,11 @@ namespace components.mediaList
 
         Task SaveStream(string publicPathORkey, Stream stream);
 
-        Task<string> readAsync(string publicPathORkey);
+        //Task<string> readAsync(string publicPathORkey);
 
         Task<string[]> getKeysByPrefix(string prefix);
 
-        Task copyObjectAsync(string from, string to);
+        //Task copyObjectAsync(string from, string to);
 
         Task<ImageInfoModel> getImageInfoAsync(string publicPathORkey);
 
@@ -50,138 +51,100 @@ namespace components.mediaList
         Task copyFolderAsync(string from, string to);
     }
 
+    public class s3Config: UploadConfigModel
+    {
+        [JsonIgnore]
+        public string secretkey { get; set; }
+
+    }
+
 
     public class StorageService : IStorageService
     {
         readonly ILogger _logger;
 
-        readonly UploadConfigModel _uploadConfig;
-        readonly string _awsSecretKey;
-        readonly bool _s3UsesHttp = false;
-
-        readonly string _s3customEndpoint;
-
-        readonly string _storageRoot;
+        readonly s3Config _uploadConfig;
+        readonly folderCreator.MediaLocations _mediaLocations;
 
 
         public StorageService(
-            IConfiguration configuration,
+            IConfiguration config,
             ILogger<StorageService> logger
         )
         {
             _logger = logger;
 
-            var section = configuration.GetSection("s3Storage");
-
-            _s3customEndpoint = section["customEndpoint"];
-
-            _uploadConfig = new UploadConfigModel
+            _uploadConfig = config.GetSection("s3Storage").Get<s3Config>();
+            if(null == _uploadConfig)
             {
-                awsRegion = section["region"],
-                aws_key = section["accesskey"],
-                bucket = section["bucket"],
-                aws_url = section["customEndpoint"],
-                filesystemLink= section["filesystemLink"]
-            };
+                throw new Exception("config section s3Storage not found");
+            }
+
+            _mediaLocations = config.GetSection("mediaLocations").Get<folderCreator.MediaLocations>();
+            if (null == _mediaLocations)
+                throw new Exception("config mediaLocations not found");
 
 
-            _awsSecretKey = section["secretkey"];
-
-            var strs3UsesHttp = section["endPointHttp"];
-            if (!string.IsNullOrWhiteSpace(strs3UsesHttp) && strs3UsesHttp.ToLower() == "true")
-                _s3UsesHttp = true;
-
-            _storageRoot = (section["StorageRoot"]??"").Trim('/');
-
-            //Don't do it as with s3 api we can't configure it to be public
-            ensureLocalBucket();
+            
+            
 
         }
 
         #region S3 Utilities
         Amazon.S3.AmazonS3Client createS3Client(string overrideEndPoint = null)
         {
-            var awsRegion = Amazon.RegionEndpoint.GetBySystemName(_uploadConfig.awsRegion);
-            if (string.IsNullOrWhiteSpace(_s3customEndpoint))
+            var awsRegion = Amazon.RegionEndpoint.GetBySystemName(_uploadConfig.region);
+            if (string.IsNullOrWhiteSpace(_uploadConfig.customEndpoint))
             {
-                return new Amazon.S3.AmazonS3Client(_uploadConfig.aws_key, _awsSecretKey, awsRegion);
+                return new Amazon.S3.AmazonS3Client(_uploadConfig.accesskey, _uploadConfig.secretkey, awsRegion);
             }
             else
             {
                 var customRegion = new Amazon.S3.AmazonS3Config
                 {
                     RegionEndpoint = awsRegion,
-                    ServiceURL = _s3customEndpoint,
+                    ServiceURL = _uploadConfig.customEndpoint,
                     ForcePathStyle = true,
-                    UseHttp = _s3UsesHttp
+                    UseHttp = _uploadConfig.endPointHttp
                 };
 
                 if (!string.IsNullOrWhiteSpace(overrideEndPoint))
                     customRegion.ServiceURL = overrideEndPoint;
 
 
-                return new Amazon.S3.AmazonS3Client(_uploadConfig.aws_key, _awsSecretKey, customRegion);
+                return new Amazon.S3.AmazonS3Client(_uploadConfig.accesskey, _uploadConfig.secretkey, customRegion);
             }
 
         }
 
-        static bool _localBucketChecked = false;
-        void ensureLocalBucket()
+        public struct StorageKey
         {
-            if (_localBucketChecked)
-                return;
+            public string bucket { get; set; }
+            public string key { get; set; }
+        }
 
-            _localBucketChecked = true;
+        public static StorageKey getStorageKey(string appKey)
+        {
+            var split = appKey.Replace('\\', '/').Trim('/').Split('/');
 
-            if (string.IsNullOrWhiteSpace(_s3customEndpoint))
-                return;
-
-            if (string.IsNullOrWhiteSpace(_uploadConfig.bucket))
-                throw new Exception("s3 bucket name not configured");
-
-            if (string.IsNullOrWhiteSpace(_uploadConfig.awsRegion))
-                throw new Exception("s3 bucketRegion name not configured");
-
-            //todo: log
-            using (var s3Client = createS3Client())
+            if (split.Length < 2)
             {
-                //we have to live with the depreciation because of Minio for now
-                if (AmazonS3Util.DoesS3BucketExistAsync(s3Client, _uploadConfig.bucket).Result)
-                    return;
-
-                var putBucketResponse = s3Client.PutBucketAsync(new PutBucketRequest
-                {
-                    BucketName = _uploadConfig.bucket,
-                    BucketRegionName = _uploadConfig.awsRegion,
-                    CannedACL = S3CannedACL.PublicRead
-                }).Result;
-
+                throw new Exception($"invalid storage key {appKey}. Must have at least one levels of folders");
             }
 
-
-        }
-
-        string getStorageKey(string appKey)
-        {
-            if (!String.IsNullOrWhiteSpace(_storageRoot))
-                appKey = $"{_storageRoot}/{appKey}";
-
-            return appKey;
+            return new StorageKey
+            {
+                bucket = split[0],
+                key = String.Join('/', split.Skip(1))
+            };
+            
         }
 
         string pathPrefix
         {
             get
             {
-                if (!string.IsNullOrWhiteSpace(_s3customEndpoint))
-                {
-                    return $"{_s3customEndpoint}/{_uploadConfig.bucket}/"
-                      + (string.IsNullOrWhiteSpace(_storageRoot) ? "" : $"{_storageRoot}/");
-
-                }
-
-                return $"http://{_uploadConfig.bucket}.s3.amazonaws.com/"
-                  + (string.IsNullOrWhiteSpace(_storageRoot) ? "" : $"{_storageRoot}/");
+                return $"{_uploadConfig.customEndpoint}/";
             }
         }
 
@@ -205,7 +168,7 @@ namespace components.mediaList
 
         public string keyForDirectUpload(string publicPathOrKey)
         {
-            return (string.IsNullOrWhiteSpace(_storageRoot) ? "" : $"{ _storageRoot}/") + getKey(publicPathOrKey);
+            return  getKey(publicPathOrKey);
         }
 
         static string ToHexString(byte[] data, bool lowercase = true)
@@ -279,7 +242,7 @@ e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
             var credsStrings = new[]
             {
                 datetime.Substring(0, 8),
-                _uploadConfig.awsRegion,
+                _uploadConfig.region,
                 "s3",
                 "aws4_request"
             };
@@ -310,9 +273,9 @@ e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
 
 
             var signing_key = getSignatureKey(
-                key: _awsSecretKey,
+                key: _uploadConfig.secretkey,
                 dateStamp: datetime.Substring(0, 8),
-                regionName: _uploadConfig.awsRegion,
+                regionName: _uploadConfig.region,
                 serviceName: "s3"
                 );
 
@@ -335,8 +298,8 @@ e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
                 {
                     var res = await s3Client.ListObjectsV2Async(new ListObjectsV2Request
                     {
-                        BucketName = _uploadConfig.bucket,
-                        Prefix = source,
+                        BucketName = source.bucket,
+                        Prefix = source.key,
                     });
 
                     if (0 == res.KeyCount)
@@ -344,7 +307,7 @@ e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
 
                     await s3Client.DeleteObjectsAsync(new DeleteObjectsRequest
                     {
-                        BucketName = _uploadConfig.bucket,
+                        BucketName = source.bucket,
                         Objects = res.S3Objects.Select(o=> new KeyVersion {Key=o.Key}).ToList()
                     });
                 }
@@ -363,8 +326,8 @@ e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
                 while (true) {
                     var res = await s3Client.ListObjectsV2Async(new ListObjectsV2Request
                     {
-                        BucketName = _uploadConfig.bucket,
-                        Prefix = source,
+                        BucketName = source.bucket,
+                        Prefix = source.key,
                         ContinuationToken = ContinuationToken
                     });
 
@@ -372,14 +335,14 @@ e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
                     var done = await Task.WhenAll(res.S3Objects.Select(async o =>
                     {
 
-                        var fileDestination = o.Key.ReplaceInBegining(source, destination);
+                        var fileDestination = o.Key.ReplaceInBegining(source.key, destination.key);
 
                         if (o.Key == fileDestination)
                             return true;
 
                         await s3Client.CopyObjectAsync(
-                            _uploadConfig.bucket, o.Key,
-                            _uploadConfig.bucket, fileDestination
+                            source.bucket, o.Key,
+                            destination.bucket, fileDestination
                         );
 
                         return true;
@@ -400,13 +363,13 @@ e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
 
         public async Task<bool> keyExists(string publicPathORkey)
         {
-            var key = getKey(publicPathORkey);
+            var source = getStorageKey(getKey(publicPathORkey));
             using (var s3Client = createS3Client())
             {
                 var res = await s3Client.ListObjectsV2Async(new ListObjectsV2Request
                 {
-                    BucketName = _uploadConfig.bucket,
-                    Prefix = getStorageKey(key)
+                    BucketName = source.bucket,
+                    Prefix = source.key
                 });
 
                 return res.KeyCount > 0;
@@ -415,10 +378,10 @@ e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
 
         public async Task<Stream> getImageStream(string publicPathORkey, int width)
         {
-            var key = getKey(publicPathORkey);
+            var source = getStorageKey(getKey(publicPathORkey));
             using (var s3Client = createS3Client())
             {
-                var res = await s3Client.GetObjectAsync(_uploadConfig.bucket, getStorageKey(key));
+                var res = await s3Client.GetObjectAsync(source.bucket, source.key);
 
                 var ms = new MemoryStream();
                 {
@@ -449,32 +412,30 @@ e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
 
         }
 
-        public async Task<ImageInfoModel> getImageInfoAsync(string publicPathORkey)
+        public Task<ImageInfoModel> getImageInfoAsync(string publicPathORkey)
         {
-            var key = getKey(publicPathORkey);
-            using (var s3Client = createS3Client())
+
+            var fullFIleName = Path.Combine(_mediaLocations.playgroundFolder, publicPathORkey);
+
+            using (var image = Image.Load(fullFIleName))
             {
-                var res = await s3Client.GetObjectAsync(_uploadConfig.bucket, getStorageKey(key));
-
-                using (var image = Image.Load(res.ResponseStream))
+                return Task.FromResult(new ImageInfoModel
                 {
-                    return new ImageInfoModel
-                    {
-                        width = image.Width,
-                        height = image.Height
-                    };
-                }
-
+                    width = image.Width,
+                    height = image.Height
+                });
             }
+
+            
         }
 
 
         public async Task<AudioInfoModel> getAudioInfoAsync(string publicPathORkey)
         {
-            var key = getKey(publicPathORkey);
+            var source = getStorageKey(getKey(publicPathORkey));
             using (var s3Client = createS3Client())
             {
-                var res = await s3Client.GetObjectAsync(_uploadConfig.bucket, getStorageKey(key));
+                var res = await s3Client.GetObjectAsync(source.bucket, source.key);
 
                 using (var audio = new WaveFileReader(res.ResponseStream))
                 {
@@ -488,16 +449,19 @@ e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
         }
 
 
-        public async Task copyObjectAsync(string from,string to)
+        public async Task copyObjectAsync(string from1,string to1)
         {
             try
             {
+                var from = getStorageKey(getKey(from1));
+                var to =getStorageKey(getKey(to1));
+
                 using (var s3Client = createS3Client())
                 {
 
                     await s3Client.CopyObjectAsync(
-                        _uploadConfig.bucket, getStorageKey(getKey(from)),
-                        _uploadConfig.bucket, getStorageKey(getKey(to))
+                        from.bucket, from.key,
+                        to.bucket, to.key
                         );
                 }
             }
@@ -511,10 +475,10 @@ e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
         {
             try
             {
-                var key_prefix = getKey(prefix);
+                var key_prefix = getStorageKey(getKey(prefix));
                 using (var s3Client = createS3Client())
                 {
-                    var res = (await s3Client.ListObjectsAsync(_uploadConfig.bucket, getStorageKey(key_prefix)));
+                    var res = (await s3Client.ListObjectsAsync(key_prefix.bucket, key_prefix.key));
 
                     return res.S3Objects.Select(o => publicPath(o.Key)).ToArray();
                 }
@@ -531,10 +495,10 @@ e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
         {
             try
             {
-                var key = getKey(publicPathORkey);
+                var key = getStorageKey(getKey(publicPathORkey));
                 using (var s3Client = createS3Client())
                 {
-                    var res = await s3Client.GetObjectAsync(_uploadConfig.bucket, getStorageKey(key));
+                    var res = await s3Client.GetObjectAsync(key.bucket, key.key);
 
                     var ms = new MemoryStream();
                     await res.ResponseStream.CopyToAsync(ms);
@@ -565,13 +529,13 @@ e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
 
         public async Task SaveStream(string publicPathORkey, Stream stream)
         {
-            var key = getKey(publicPathORkey);
+            var key = getStorageKey(getKey(publicPathORkey));
             using (var s3Client = createS3Client())
             {
                 await s3Client.PutObjectAsync(new PutObjectRequest
                 {
-                    BucketName = _uploadConfig.bucket,
-                    Key = getStorageKey(key),
+                    BucketName = key.bucket,
+                    Key = key.key,
                     InputStream = stream
                 });
             }
@@ -579,18 +543,18 @@ e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
 
         public string createPresignedUrl(string publicPathORkey, bool forUpload = false, string overrideEndPoint = null)
         {
-            var key = getKey(publicPathORkey);
+            var key = getStorageKey(getKey(publicPathORkey));
             using (var s3Client = createS3Client(overrideEndPoint))
             {
                 var request1 = new GetPreSignedUrlRequest
                 {
-                    BucketName = _uploadConfig.bucket,
-                    Key = getStorageKey(key),
+                    BucketName = key.bucket,
+                    Key = key.key,
                     Expires = DateTime.Now.AddMinutes(forUpload ? 60 : 5),
                     Verb = forUpload ? Amazon.S3.HttpVerb.PUT : Amazon.S3.HttpVerb.GET,
                 };
 
-                if (_s3UsesHttp)
+                if (_uploadConfig.endPointHttp)
                     request1.Protocol = Amazon.S3.Protocol.HTTP;
 
                 var ret = s3Client.GetPreSignedURL(request1);

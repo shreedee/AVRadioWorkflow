@@ -18,20 +18,56 @@ using System.IO;
 
 namespace components.folderCreator
 {
+    /// <summary>
+    /// locations config . settings are here even if used in other micro services
+    /// </summary>
+    public class MediaLocations
+    {
+        /// <summary>
+        /// subfolder where Pre-Published articles are at 
+        /// can be reached from minio with this key or from filesystem with this key as well
+        /// </summary>
+        public string articlesRoot { get; set; }
+
+        /// <summary>
+        /// subforlder moved when things are waiting to be published
+        /// </summary>
+        public string toPublish { get; set; }
+
+        /// <summary>
+        /// subfolder moved to this location when things have been published
+        /// </summary>
+        public string publishDone { get; set; }
+
+
+        /// <summary>
+        /// fully resolved fileSystem link For MINIO ROOT
+        /// </summary>
+        public string playgroundFolder{ get; set; }
+
+
+        /// <summary>
+        /// fully resolved fileSystem link where to CopyTemplates from 
+        /// </summary>
+        public string templatesFolder { get; set; }
+
+
+    }
+
     [Route("api/[controller]")]
     public partial class FolderCreatorController : Controller
     {
         readonly ILogger _logger;
         readonly mediaList.IStorageService _storage;
 
-        readonly string _templateRoot;
+        
         readonly CreateOptionModel _createOptions = new CreateOptionModel();
         readonly mediaList.ImageInfoModel _desiredImageInfo = new mediaList.ImageInfoModel();
 
-        readonly string _wp_url;
+        //readonly string _wp_url;
 
-        readonly string[] _archiveLocations;
-        readonly string _articlesRoot;
+
+        readonly MediaLocations _mediaLocations;
 
         public FolderCreatorController(
             IConfiguration configuration,
@@ -41,19 +77,27 @@ namespace components.folderCreator
         {
             _logger = logger;
             _storage = storage;
-            _templateRoot= configuration["mediaLocations:templates"];
+            //_templateRoot= configuration["mediaLocations:templates"];
 
             configuration.Bind("createOptions", _createOptions);
             configuration.Bind("desiredImageInfo", _desiredImageInfo);
 
-            _wp_url = configuration["wordpress:url"];
+            //_wp_url = configuration["wordpress:url"];
 
-            _archiveLocations = configuration.GetSection("mediaLocations:afterPublish").Get<string[]>();
+            //_archiveLocations = configuration.GetSection("mediaLocations:afterPublish").Get<string[]>();
 
-            
-            _articlesRoot = configuration["mediaLocations:articles"];
+            _mediaLocations = configuration.GetSection("mediaLocations").Get<MediaLocations>();
+            if (null == _mediaLocations)
+                throw new Exception("config mediaLocations not found");
+
+
         }
 
+        /// <summary>
+        /// Loading Folder details from a given File
+        /// </summary>
+        /// <param name="filename"></param>
+        /// <returns></returns>
         [HttpGet("load")]
         public async Task<FolderDataModel> LoadFolderDetails([FromQuery]string filename)
         {
@@ -73,13 +117,41 @@ namespace components.folderCreator
             }
             else
             {
-                string jsonData = await _storage.readAsync(filename);
+                var fullFileName = Path.Combine(_mediaLocations.playgroundFolder, filename);
+
+                string jsonData = await System.IO.File.ReadAllTextAsync(fullFileName);
+                
                 ret.folderDetails = JsonConvert.DeserializeObject<FolderDetailsModel>(jsonData);
+
+                var savedFolder = Path.GetDirectoryName(fullFileName);
+
+                var foundMedia = (new[] { "Media", "Images", "Original", "Final" }).SelectMany(mediaType =>
+                 {
+                     var subPath = Path.Combine(savedFolder, mediaType);
+                     if (!Directory.Exists(subPath)) {
+                         return new mediaList.MediaFileBaseModel[] { };
+                     }
+
+                     return Directory.GetFiles(subPath)
+                     .Select(f => Path.GetFileName(f))
+                     .Where(f => f != "status.json")
+                     .Select(f => mediaList.MediaFileBaseModel.NewMediaFileFromMediaType(mediaType, f));
+                     
+                 }).ToArray();
+
+                var existingPaths = ret.folderDetails.publishDetails.mediaFiles.Select(f => f.path);
+
+                foundMedia = foundMedia.Where(f => !existingPaths.Contains(f.path)).ToArray();
+
+                if (foundMedia.Length > 0) {
+                    ret.folderDetails.publishDetails.mediaFiles = ret.folderDetails.publishDetails.mediaFiles.Concat(foundMedia).ToArray();
+                    await SaveFolderAsync(ret.folderDetails);
+                }
 
                 ret.displayData = new DisplayDataModel
                 {
-                    externalLink = $"{_storage.uploadConfig.filesystemLink}/{ret.folderDetails.savedFolder}",
-                    httpLinkPrefix = $"{_storage.uploadConfig.aws_url}/{_storage.uploadConfig.bucket}",
+                    //externalLink = $"{_storage.uploadConfig.filesystemLink}/{ret.folderDetails.savedFolder}",
+                    httpLinkPrefix = $"{_storage.uploadConfig.customEndpoint}",
                     desiredImageInfo = _desiredImageInfo
                 };
             }
@@ -96,13 +168,28 @@ namespace components.folderCreator
         [HttpPost("publish")]
         public async Task<String> Publish([FromBody]FolderDetailsModel data)
         {
+            if (data.publishStatus != PublishStatusModel.publishRequested)
+            {
+                data.publishStatus = PublishStatusModel.publishRequested;
+
+                data.publishedActions = (data.publishedActions ?? new PublishedLinkModel[] { }).Concat(new[] {new PublishedLinkModel{
+                lastModified= DateTime.Now,
+                message= "publish requested"
+                } }).ToArray();
+            }
+
             var statusFileName = await SaveFolderAsync(data);
-            var link = await PushToWP(data);
 
-            var currentSavedFolder = data.savedFolder;
+            return statusFileName;
 
+
+            //var link = await PushToWP(data);
+
+            //var currentSavedFolder = data.savedFolder;
+            /*
             string publishedLocation = null;
 
+            
             foreach(var location in _archiveLocations)
             {
                 data.savedFolder = currentSavedFolder.ReplaceInBegining(_articlesRoot, location);
@@ -113,16 +200,27 @@ namespace components.folderCreator
                 if (null == publishedLocation)
                     publishedLocation = newlocation;
             }
+            */
 
-            await _storage.deleteFolderAsync(currentSavedFolder);
+            //await _storage.deleteFolderAsync(currentSavedFolder);
 
-            return publishedLocation;
+            //return publishedLocation;
         }
 
 
 
 
-        Task<string[]> getTemplatesByGenreAsync(string genre) { return _storage.getKeysByPrefix($"{_templateRoot}/{genre}"); }
+        Task<string[]> getTemplatesByGenreAsync(string genre) 
+        {
+            if (!Directory.Exists(_mediaLocations.templatesFolder))
+                throw new bootCommon.ExceptionWithCode($"Template folder {_mediaLocations.templatesFolder} does not exist");
+
+            var ret = Directory.GetFiles(_mediaLocations.templatesFolder, $"{genre}*");
+
+            return Task.FromResult( ret);
+            
+            //return _storage.getKeysByPrefix($"{_templateRoot}/{genre}"); 
+        }
 
         /// <summary>
         /// 
@@ -228,7 +326,7 @@ namespace components.folderCreator
 
                 if("rpp" == ext)
                 {
-                    var rppData = await _storage.readAsync(t);
+                    var rppData = await System.IO.File.ReadAllTextAsync(t);
                     await Task.WhenAll(data.publishDetails.mediaFiles.Where(f => f is mediaList.AuViFileModel).Select(async f =>
                     {
                         var justfileName = Path.GetFileNameWithoutExtension(f.fileName);
@@ -238,14 +336,21 @@ namespace components.folderCreator
                             $"{data.savedFolder}/{justfileName}.rpp",
                             new MemoryStream(Encoding.UTF8.GetBytes(rppDataEdited)));
 
-                        //await _storage.copyObjectAsync(t, $"{data.savedFolder}/{justfileName}.rpp");
+                        var dest = Path.Combine(_mediaLocations.playgroundFolder, data.savedFolder, templatFileName);
+                        System.IO.File.Copy(t, dest);
+
+                        //                        await _storage.copyObjectAsync(t, $"{data.savedFolder}/{justfileName}.rpp");
 
                     }));
 
                 }
                 else
                 {
-                    await _storage.copyObjectAsync(t, $"{data.savedFolder}/{templatFileName}");
+                    //await _storage.copyObjectAsync(t, $"{data.savedFolder}/{templatFileName}");
+
+                    var dest = Path.Combine(_mediaLocations.playgroundFolder, data.savedFolder, templatFileName);
+
+                    System.IO.File.Copy(t, dest);
                 }
 
 

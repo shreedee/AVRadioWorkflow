@@ -70,7 +70,8 @@ namespace bootCommon
 
 			if (onlyTopLevel)
 			{
-				if (null == witcode)
+				//this is internal application doo hide error
+				if (false && null == witcode)
 				{
 					_message = $"The server encountered an internal error, please try again later (Error ID: {_errorId})";
 				}

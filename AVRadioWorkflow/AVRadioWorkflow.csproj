@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <TargetFramework>netcoreapp2.1</TargetFramework>
-    <TypeScriptToolsVersion>3.1</TypeScriptToolsVersion>
+    <TypeScriptToolsVersion>3.7</TypeScriptToolsVersion>
     <TypeScriptCompileBlocked>true</TypeScriptCompileBlocked>
   </PropertyGroup>
 
@@ -53,6 +53,7 @@
     <None Include="ClientApp\.\generated\DirectUploadModel.ts" />
     <None Include="ClientApp\.\generated\DisplayDataModel.ts" />
     <None Include="ClientApp\.\generated\ErrorViewModel.ts" />
+    <None Include="ClientApp\.\generated\FinalAvFileModel.ts" />
     <None Include="ClientApp\.\generated\FolderDataModel.ts" />
     <None Include="ClientApp\.\generated\FolderDetailsModel.ts" />
     <None Include="ClientApp\.\generated\ImageFileModel.ts" />
@@ -61,6 +62,8 @@
     <None Include="ClientApp\.\generated\OtherFileModel.ts" />
     <None Include="ClientApp\.\generated\PublishDetailsModel.ts" />
     <None Include="ClientApp\.\generated\PublishedLinkModel.ts" />
+    <None Include="ClientApp\.\generated\PublishStatus.ts" />
+    <None Include="ClientApp\.\generated\PublishStatusModel.ts" />
     <None Include="ClientApp\.\generated\UploadConfigModel.ts" />
   </ItemGroup>
 

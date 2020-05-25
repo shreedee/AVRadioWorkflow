@@ -30,7 +30,7 @@ namespace components.folderCreator
                 if (string.IsNullOrWhiteSpace(data.publishDetails.bodyText))
                     throw new bootCommon.ExceptionWithCode("bodyText is empty");
 
-                var client = await login.AuthController.InitWP(_wp_url, Request, _logger);
+                var client = await login.AuthController.InitWP(""/*_wp_url*/, Request, _logger);
 
 
                 var imagesToUpload = data.publishDetails.mediaFiles.Where(f => f is mediaList.ImageFileModel && ((mediaList.ImageFileModel)f).canPublish).ToArray();
@@ -58,7 +58,7 @@ namespace components.folderCreator
                 if (null == category)
                     throw new bootCommon.ExceptionWithCode($"Category {data.publishDetails.category} not found");
 
-
+                /*
                 if (null != data.publishedLink)
                     throw new bootCommon.ExceptionWithCode("Not implemented");
 
@@ -76,6 +76,7 @@ namespace components.folderCreator
                     wpLink = thePost.Link,
                     lastModified = DateTime.Now
                 };
+                */
 
                 await SaveFolderAsync(data);
 
@@ -94,7 +95,7 @@ namespace components.folderCreator
 
                     Task.Delay(TimeSpan.FromSeconds(3)).Wait();
 
-                    uploaded.Post = thePost.Id;
+                    //uploaded.Post = thePost.Id;
 
                     uploaded = client.Media.Update(uploaded).Result;
 
@@ -167,8 +168,8 @@ namespace components.folderCreator
                     field_3 = add_mp3s,//add-mp3s
                 };
 
-                
-
+                throw new NotImplementedException();
+                /*
                 var done = await postToWP(client, new {
                     postId = thePost.Id,
                     acfFields,
@@ -179,6 +180,7 @@ namespace components.folderCreator
                 await SaveFolderAsync(data);
 
                 return thePost.Link;
+                */
             }
             catch (bootCommon.ExceptionWithCode ex)
             {

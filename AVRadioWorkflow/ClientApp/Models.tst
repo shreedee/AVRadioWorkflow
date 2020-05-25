@@ -4,7 +4,6 @@
     using Typewriter.Extensions.Types;
     using System.IO;
         
-        
     Template(Settings settings)
     {
         settings.OutputFilenameFactory = file =>
