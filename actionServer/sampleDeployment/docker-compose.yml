@@ -1,0 +1,10 @@
+version: '3'
+
+services:
+  deleteoldrevlogs: 
+    image: labizbille/newrevadmin:1.0.14
+    command: prod -- ./dist/esAdmin/deleteOldRevLogs.js
+    volumes:
+      - ./id_for_es:/root/.ssh/id_rsa_toCopy
+      - ./appsettings.json:/scripts/appsettings.json
+

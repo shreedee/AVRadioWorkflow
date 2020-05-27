@@ -1,0 +1,92 @@
+{
+    "recordingDate": "2020-02-17T06:49:39Z",
+    "genre": "Reading",
+    "description": "Loretta Journey 3 talk Unity Pav.",
+    "language": "English",
+    "recordingBy": "Radio Team",
+    "savedFolder": "RadioWorkflow/2020_02_17_Reading_Loretta_Journey_3_talk_Unity_Pav._English__Radio_Team_",
+    "publishDetails": {
+        "title": "JOURNEY TO THE SOUL - Day Three, Through The Mental Planes into The World Soul",
+        "twiterTitle": "Savitri enters her mind on her journey through her mortal body to find her Immortal soul. She learns how life is tamed, limited, bound and controlled in the mind. Sri Aurobindo shows us how our mind functions and what we can receive from the higher levels of mind in the King's journey through the universal mental planes. Then we have the privilege of being with the King as he makes his way to the center and starting point of creation, the world soul, deep in the world's heart. We can be with the King when he is with the Divine Mother, the Supreme Divine Creatrix of the cosmos.",
+        "bodyText": "<p>     We start the third day of our two journeys to both the soul of the world and to our individual soul. We resume our journeys to travel first with Savitri through the human mind. The mind is an organized, orderly place. Here the life energies which ran wild and free in the uncontrolled vital being, in the absence of the soul's influence, are bound and tamed and held under strict control. Savitri was told to seek for her soul in \"matter's body\", so she goes only through the usual mental functions which all people have.</p><p>     We will see the same levels of human mind in in more detail when we travel with the King in the universal mental planes, and we will also go with him through the higher mental worlds. But finally, to get to the World Soul to find the Divine Mother, the King will have to leave the Self of Mind to travel deep into the world's heart to find the World Soul, the center and starting point of creation.</p><p>     There Sri Aurobindo shows us the resting place for our soul between our many births. We will see what happens to the Traveler Of The Worlds the first time he sees the Divine Mother, who ever awaits the seeking soul. We will be with the great Yogi Traveler when he completes his destined task, and the Divine Mother, the Supreme Creatrix of all the worlds, promises to take birth on earth so that mankind will progress more quickly.</p><p><br></p>",
+        "programBy": "Loretta",
+        "category": "Sri Aurobindo",
+        "mediaFiles": [
+            {
+                "fileType": "Original",
+                "proccessedPath": "Final/STE_008_ed.mp3",
+                "path": "Original/STE_008.mp3",
+                "objectType": "AuViFileModel",
+                "fileName": "STE_008.mp3"
+            },
+            {
+                "fileType": "Original",
+                "proccessedPath": "Final/110102_003758_ed.MP3",
+                "path": "Original/110102_003758.MP3",
+                "objectType": "AuViFileModel",
+                "fileName": "110102_003758.MP3"
+            },
+            {
+                "fileType": "Images",
+                "imageInfo": {
+                    "width": 2592,
+                    "height": 1944
+                },
+                "canPublish": true,
+                "path": "Images/DSC04763.JPG",
+                "proccessedPath": "Images/DSC04763.JPG",
+                "objectType": "ImageFileModel",
+                "fileName": "DSC04763.JPG"
+            },
+            {
+                "fileType": "Images",
+                "imageInfo": {
+                    "width": 2592,
+                    "height": 1944
+                },
+                "canPublish": true,
+                "path": "Images/DSC04762.JPG",
+                "proccessedPath": "Images/DSC04762.JPG",
+                "objectType": "ImageFileModel",
+                "fileName": "DSC04762.JPG"
+            },
+            {
+                "fileType": "Images",
+                "imageInfo": {
+                    "width": 2010,
+                    "height": 1506
+                },
+                "canPublish": true,
+                "path": "Images/2_09__Sri_Aurobindo__24_04_1950.jpg",
+                "proccessedPath": "Images/2_09__Sri_Aurobindo__24_04_1950.jpg",
+                "objectType": "ImageFileModel",
+                "fileName": "2_09__Sri_Aurobindo__24_04_1950.jpg"
+            },
+            {
+                "fileType": "Images",
+                "imageInfo": {
+                    "width": 2010,
+                    "height": 1506
+                },
+                "canPublish": true,
+                "path": "Images/cc_20__Sri_Aurobindo__1918_1920.jpg",
+                "proccessedPath": "Images/cc_20__Sri_Aurobindo__1918_1920.jpg",
+                "objectType": "ImageFileModel",
+                "fileName": "cc_20__Sri_Aurobindo__1918_1920.jpg"
+            },
+            {
+                "fileType": "Images",
+                "imageInfo": {
+                    "width": 2010,
+                    "height": 1506
+                },
+                "canPublish": true,
+                "path": "Images/1_27__Sri_Aurobindo__1918__1920.jpg",
+                "proccessedPath": "Images/1_27__Sri_Aurobindo__1918__1920.jpg",
+                "objectType": "ImageFileModel",
+                "fileName": "1_27__Sri_Aurobindo__1918__1920.jpg"
+            }
+        ]
+    },
+    "publishedLink": null
+}

@@ -1,0 +1,16 @@
+version: '3'
+# for production use run with command: prod -- ./dist/XXXXXX.js
+
+services:
+  scriptsholder: 
+    build: .
+    image: labizbille/radioactions:0.1
+#    command: debug -- ./src/test.ts
+#    command: prod -- ./dist/test.js
+    command: startandwait
+    volumes:
+      - ./scripts:/scripts/
+      - ./testRsaKeys/id_rsa_testonly_private:/root/.ssh/id_rsa_toCopy
+    ports:
+      - 9222:9222
+

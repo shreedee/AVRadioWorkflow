@@ -1,0 +1,23 @@
+{
+  "name": "scripts",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "check": "node ./dist/test.js",
+    "prod": "node ",
+    "debug": "ts-node-dev --inspect-brk=0.0.0.0:9222 ",
+    "startandwait": "tail -f /dev/null"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "lodash": "^4.17.15",
+    "tunnel-ssh": "^4.1.4"
+  },
+  "devDependencies": {
+    "@types/lodash": "^4.14.150",
+    "@types/node": "^13.13.4"
+  }
+}

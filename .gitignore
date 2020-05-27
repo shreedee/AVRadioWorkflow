@@ -7,3 +7,6 @@
 /AVRadioWorkflow/bin
 /AVRadioWorkflow/obj
 /AVRadioWorkflow/ClientApp/preRenderDist
+/actionServer/release
+/actionServer/scripts/node_modules
+/actionServer/scripts/dist

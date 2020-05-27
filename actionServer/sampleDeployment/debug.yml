@@ -1,0 +1,13 @@
+version: '3'
+
+services:
+  toDebug: 
+    build: .
+    image: labizbille/newrevadmin:1.0.14
+    command: debug -- ./src/esAdmin/deleteOldRevLogs.ts
+    volumes:
+      - ./id_for_es:/root/.ssh/id_rsa_toCopy
+      - ./appsettings.json:/scripts/appsettings.json
+    ports:
+      - 9222:9222
+
