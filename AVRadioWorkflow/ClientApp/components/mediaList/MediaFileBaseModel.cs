@@ -1,4 +1,5 @@
-﻿using Newtonsoft.Json;
+﻿using bootCommon;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
@@ -47,6 +48,18 @@ namespace components.mediaList
 
         public readonly static string[] SupportedAVTypes = new[] { "mp3", "mp4", "avi", "wav", "mpeg" };
 
+
+        /// <summary>
+        /// The wordpress ID for this media
+        /// </summary>
+        [ExportAsOptional]
+        public string wpPostId { get; set; }
+
+        /// <summary>
+        /// Wordpress path for this media
+        /// </summary>
+        [ExportAsOptional] 
+        public string wpPath { get; set; }
 
         public static MediaFileBaseModel NewMediaFileFromMediaType(string mediaType, string fileName)
         {

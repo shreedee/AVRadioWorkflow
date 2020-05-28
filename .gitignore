@@ -10,3 +10,10 @@
 /actionServer/release
 /actionServer/scripts/node_modules
 /actionServer/scripts/dist
+/actionServer/privateData
+/testdata/playground
+/testdata
+/AVRadioWorkflow/wwwroot/dist
+/actionServer/scripts/generated
+/AVUpdaterPlugin/AVUpdaterPlugin - Copy.php
+/.vs

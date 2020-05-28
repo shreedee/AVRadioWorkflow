@@ -9,16 +9,33 @@
    License: GPL2
    */
 
+    function removeDirectory($path) {
+
+        $files = glob($path . '/*');
+        foreach ($files as $file) {
+            is_dir($file) ? removeDirectory($file) : unlink($file);
+        }
+        rmdir($path);
+
+        return;
+    }
+
    //invoked as https://www.aurovilleradio.org/wp-json/avupdater/v1/fromfile?fileName=test.json
     function av_updater_fromfile_func( WP_REST_Request $request ) {
 
         try {
 
-            $fileName = $request['fileName'];
+            $baseFolderName ='/pmon/'.$request['baseFolderName'];
+            $fileName = $baseFolderName .'/publishData.json';
 
-            $str = file_get_contents('/pmon/'.$fileName);
+            
+
+            if(!file_exists($fileName))
+                throw new Exception('file not found '. $request['baseFolderName']);
+
+            $str = file_get_contents($fileName);
             if(!$str)
-                throw new Exception('failed to get content');
+                throw new Exception('failed to get content for fileName :'.$fileName);
 
             $jsonOrginal = json_decode($str, true);
             if (JSON_ERROR_NONE !== json_last_error()) {
@@ -38,9 +55,10 @@
 
             }else{
 
-                throw new Exception("escape");
-
-                $postData["post_status"]='draft';
+                if(empty($postData["post_status"])){
+                    $postData["post_status"]='draft';
+                }
+                
                 $postID = wp_insert_post($postData, true);
     
             }
@@ -54,31 +72,66 @@
                 );
             }
 
+            if("newPost" == $action){
+                /*  program_rate
+                    1 Can be better : 1 Can be better
+                    2 Fairly Ok : 2 Fairly Ok
+                    3 Good: 3 Good
+                    4 Very good : 4 Very good
+                    5 Excellent: 5 Excellent
+                    */
+                update_field("field_12","5 Excellent",$postID);
+
+
+                /* Time span
+                    2 weeks : 2 weeks
+                    6 months : 6 months
+                    1 year : 1 year
+                    more than 1 year : more than 1 year
+                     */
+                update_field("field_14","more than 1 year",$postID);
+
+                //quality_rate
+                update_field("field_13","5 Excellent",$postID);
+
+                //place
+                update_field("field_15","AurovilleRadioTV",$postID);
+
+                //episode
+                update_field("field_18","AurovilleRadio",$postID);
+            }
+
+            if(!empty($jsonOrginal['twiterTitle'])){
+                update_field("field_17",$jsonOrginal['twiterTitle'],$postID);
+            }
+
+
             $updatedAttachments=array();
             $wordpress_upload_dir = wp_upload_dir();
+            $featuredImagId = null;
             foreach($jsonOrginal['attachments'] as $attachment) {
-                
-                $attachment['path'] = $wordpress_upload_dir['path'] . '/' . $attachment['fileName'];
+
+                $wpPath = $attachment['wpPath'] = $wordpress_upload_dir['path'] . '/' . $attachment['fileName'];
 
                 $attachment['guid'] = $wordpress_upload_dir['url'] . '/' . $attachment['fileName'];
+
+
+                $file_type = wp_check_filetype(basename($attachment['fileName']), null);
                 
                 if(!empty($attachment['isImage'])){
                     require_once( ABSPATH . 'wp-admin/includes/image.php' );
                     require_once(ABSPATH . 'wp-admin/includes/file.php');
 
-                    $file_type = wp_check_filetype(basename($attachment['fileName']), null);
-
                     $attachment['post_mime_type'] =$file_type['type'];
                 }
+
+                $src= $baseFolderName . '/' . $attachment['path'];
+                if(!copy($src,$wpPath)){
+                    throw new Exception("Failed to copy :".$src." -> ".$wpPath);
+                }
                 
-                /*
-                $newFile=[
-                    =>
-                    //'mime'=>(new finfo(FILEINFO_MIME))->file(  $attachment['fileName'])
-                ];
-                */
-                
-                $newFileID = wp_insert_attachment($attachment,$attachment['path'],$postID,true);
+                                
+                $newFileID = wp_insert_attachment($attachment,$wpPath,$postID,true);
 
                 if( is_wp_error($newFileID) ){
                     $attachment['error']=$newFileID->get_error_message();
@@ -87,11 +140,42 @@
 
                     if(!empty($attachment['isImage'])){
 
-
-                        $attach_data = wp_generate_attachment_metadata( $newFileID, $attachment['path'] );
+                        $attach_data = wp_generate_attachment_metadata( $newFileID, $attachment['wpPath'] );
                         wp_update_attachment_metadata( $newFileID, $attach_data );
                         
                         $attachment['attach_data']=$attach_data;
+
+                        if(empty($featuredImagId)){
+                            set_post_thumbnail($postID,$newFileID);
+                            $featuredImagId =$newFileID;
+                        }
+
+                        $scfFiled = get_field("field_5",$postID);
+                        if(empty($scfFiled)){
+                            $scfFiled =[];
+                        }
+                        array_push($scfFiled,[
+                            "add_a_picture"=>$newFileID
+                        ]);
+
+                        update_field("field_5",$scfFiled,$postID);
+
+
+                    }else{
+
+                        $scfFiled = get_field("field_3",$postID);
+                        if(empty($scfFiled)){
+                            $scfFiled =[];
+                        }
+
+                        $ext = $file_type["ext"];
+
+                        array_push($scfFiled,[
+                            $ext=>$newFileID
+                        ]);
+
+                        update_field("field_3",$scfFiled,$postID);
+
 
                     }
 
@@ -101,13 +185,7 @@
                 
             }
 
-            foreach($jsonOrginal['acfFields'] as $tfield=>$tVal) { 
-                update_field($tfield,$tVal,$postID);
-            }
-
-            if(!empty($jsonOrginal['featuredImageId'])){
-                set_post_thumbnail($postID,$jsonOrginal['featuredImageId']);
-            }
+            
 
             $acf_fields = get_fields( $postID );
             $post_fields = get_post($postID);
@@ -118,12 +196,13 @@
                 'postID'=>$postID,
                 'post_fields'=>$post_fields,
                 'acf_fields'=>$acf_fields,
-                'updatedAttachments'=>$updatedAttachments
+                'featuredImagId'=>$featuredImagId,
+                'updatedAttachments'=>$updatedAttachments,
+                'baseFolderName'=>$baseFolderName
             ];
             
-            //$done='hhhh';
+            removeDirectory($baseFolderName);
 
-            //return json_encode(serialize( $done));
             return new WP_REST_Response($done);
 
         } catch (Exception $e) {

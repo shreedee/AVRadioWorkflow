@@ -107,4 +107,8 @@
     <Exec Command="if $(ConfigurationName) == Debug ( &#xD;&#xA;IF NOT EXIST  $(TargetPath) (&#xD;&#xA;RMDIR $(ProjectDir)wwwroot\dist /S /Q&#xD;&#xA;RMDIR $(ProjectDir)node_modules\.cache /S /Q&#xD;&#xA;RMDIR $(ProjectDir)ClientApp\preRenderDist /S /Q&#xD;&#xA;&#xD;&#xA;)&#xD;&#xA;)&#xD;&#xA;&#xD;&#xA;if $(ConfigurationName) == Release (&#xD;&#xA;(if exist $(ProjectDir)wwwroot\dist RMDIR $(ProjectDir)wwwroot\dist /S /Q)&#xD;&#xA;(if exist $(ProjectDir)node_modules\.cache RMDIR $(ProjectDir)node_modules\.cache /S /Q)&#xD;&#xA;(if exist $(ProjectDir)ClientApp\preRenderDist RMDIR $(ProjectDir)ClientApp\preRenderDist  /S /Q)&#xD;&#xA;&#xD;&#xA;)&#xD;&#xA;" />
   </Target>
 
+  <Target Name="PostBuild" AfterTargets="PostBuildEvent">
+    <Exec Command="Echo &quot;copying TS Models&quot;&#xD;&#xA;xcopy $(ProjectDir)ClientApp\generated $(ProjectDir)..\actionServer\scripts\generated /i /Y" />
+  </Target>
+
 </Project>

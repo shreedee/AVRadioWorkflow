@@ -6,11 +6,18 @@ services:
     build: .
     image: labizbille/radioactions:0.1
 #    command: debug -- ./src/test.ts
-#    command: prod -- ./dist/test.js
+#    command: prod -- ./dist/src/publishBlog.js RadioWorkflow/2020_05_25_Interview_Sea_ploggers_English
     command: startandwait
+    environment:
+      - AVRADIO_SSHUSER=radio-kartik
+      - AVRADIO_PUBLISHMONITOR=/wpapp/data/pmon
+      - AVRADIO_AFTERPUB_FOLDER_0=/playground/done
+      - AVRADIO_AFTERPUB_FOLDER_1=/archive
     volumes:
       - ./scripts:/scripts/
-      - ./testRsaKeys/id_rsa_testonly_private:/root/.ssh/id_rsa_toCopy
+      - ./privateData/.ssh/id_rsa:/root/.ssh/id_rsa_toCopy
+      - ../testdata/playground:/playground/
+      - ../testdata/archive:/archive/
     ports:
       - 9222:9222
 
