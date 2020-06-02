@@ -2,3 +2,6 @@
 	path = AVRadioWorkflow/pullRequest/evaporateJS
 	url = https://github.com/shreedee/EvaporateJS.git
 	branch = fixPort
+[submodule "neDockerSchedular"]
+	path = neDockerSchedular
+	url = https://github.com/shreedee/neDockerSchedular.git
