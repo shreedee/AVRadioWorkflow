@@ -46,6 +46,20 @@
 
             $postData["post_excerpt"]=wp_trim_excerpt( $postData["post_content"]);
 
+            $userLog = 'userid not used';
+            if(!empty($jsonOrginal['author'])){
+                $authrid = get_user_by('login',$jsonOrginal['author']);
+                if(!$authrid){
+                    //throw new RuntimeException('failed to get Author ID by login: ' . $jsonOrginal['author']);
+                    $userLog = 'failed to get Author ID by login: ' . $jsonOrginal['author'].'using radioTeam :19';
+                    $authrid = 19;
+                }else{
+                    $userLog = 'using userid '.$authrid;
+                }
+                $postData["post_author"]=$authrid;
+            }
+
+
             $postID =0;
             $action = "newPost";
             if(!empty($postData["ID"])){
@@ -103,6 +117,19 @@
 
             if(!empty($jsonOrginal['twiterTitle'])){
                 update_field("field_17",$jsonOrginal['twiterTitle'],$postID);
+            }
+
+            $catLog = 'no category';
+            if(!empty($jsonOrginal['category'])){
+
+                $catLog = 'using category '.$jsonOrginal['category'];
+                $catIid = get_cat_ID($jsonOrginal['category']);
+                if(!$catIid){
+                    //throw new RuntimeException('failed to get category ID by name: ' . $jsonOrginal['category']);
+                    $catLog = 'failed to get category ID by name: ' . $jsonOrginal['category'];
+                }else{
+                    wp_set_post_categories($postID,array());
+                }
             }
 
 
@@ -198,7 +225,10 @@
                 'acf_fields'=>$acf_fields,
                 'featuredImagId'=>$featuredImagId,
                 'updatedAttachments'=>$updatedAttachments,
-                'baseFolderName'=>$baseFolderName
+                'baseFolderName'=>$baseFolderName,
+                'userLog'=>$userLog,
+                'catLog'=>$catLog
+
             ];
             
             removeDirectory($baseFolderName);

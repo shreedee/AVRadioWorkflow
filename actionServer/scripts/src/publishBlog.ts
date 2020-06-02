@@ -14,7 +14,7 @@ import {ncp} from 'ncp';
 
 async function main(){
     console.log('process.argv', process.argv);
-    
+    debugger;
 
     if(process.argv.length<3){
         throw 'Usage node publishBlog.ts WORKFLOWFOLDR_RELATVIVEtoPLAYGROUND';
@@ -55,6 +55,8 @@ async function main(){
 
     //read by the pho script to actiually do the publish
     const publishData ={
+        category:publishDetails.category,
+        author:publishDetails.programBy,
         twiterTitle:null,
         post:{
             ID:published?published.wpPostId:'',
@@ -97,21 +99,23 @@ async function main(){
 
 
     
-        
-    await Promise.all( filesToUpload.map(async f=>{
+    const scp2 = require('scp2');
 
-        const scp2 = require('scp2');
-
-        const scpDeuatls= {
-            host:'aurovilleradio.org',
-            port: 22,
-            username:process.env.AVRADIO_SSHUSER,
-            privateKey: String(fs.readFileSync('/root/.ssh/id_rsa_toCopy'))
-        };
-        
-        const scpClient = new scp2.Client(scpDeuatls);
+    const scpDeuatls= {
+        host:'aurovilleradio.org',
+        port: 22,
+        username:process.env.AVRADIO_SSHUSER,
+        privateKey: String(fs.readFileSync('/root/.ssh/id_rsa_toCopy'))
+    };
+    
+    const scpClient = new scp2.Client(scpDeuatls);
+    //donot do all in parallele it always fails so        
+    //await Promise.all( filesToUpload.map(async f=>{
+    for (const f of filesToUpload) {
         
         console.log(`uploading ${f.src}->${f.dest}`);
+
+        //all these uploads puts quite a bit of load so we ned to slow it down
 
         await new Promise( (resolve,reject)=>scpClient.upload(f.src,f.dest,err=>{
             if(err){
@@ -122,8 +126,9 @@ async function main(){
         }));
 
         console.log(`upload completed ${f.src}->${f.dest}`);
+    }
     
-    }));  
+    //}));  
     
     
     
