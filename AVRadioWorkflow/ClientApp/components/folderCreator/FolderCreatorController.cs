@@ -14,7 +14,8 @@ using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using CustomExtensions;
 using System.IO;
-
+using MassTransit;
+using System.Threading;
 
 namespace components.folderCreator
 {
@@ -65,16 +66,18 @@ namespace components.folderCreator
         readonly mediaList.ImageInfoModel _desiredImageInfo = new mediaList.ImageInfoModel();
 
         //readonly string _wp_url;
-
+        readonly IBus _mqBus;
 
         readonly MediaLocations _mediaLocations;
 
         public FolderCreatorController(
             IConfiguration configuration,
             mediaList.IStorageService storage,
+            IBus mqBus,
             ILogger<FolderCreatorController> logger
         )
         {
+            _mqBus = mqBus;
             _logger = logger;
             _storage = storage;
             //_templateRoot= configuration["mediaLocations:templates"];
@@ -180,31 +183,16 @@ namespace components.folderCreator
 
             var statusFileName = await SaveFolderAsync(data);
 
-            return statusFileName;
+            var ct = new CancellationTokenSource(TimeSpan.FromSeconds(10));
 
-
-            //var link = await PushToWP(data);
-
-            //var currentSavedFolder = data.savedFolder;
-            /*
-            string publishedLocation = null;
-
-            
-            foreach(var location in _archiveLocations)
+            await _mqBus.Send(new neSchedular.ExecuteJobTask
             {
-                data.savedFolder = currentSavedFolder.ReplaceInBegining(_articlesRoot, location);
-                await _storage.copyFolderAsync(currentSavedFolder, data.savedFolder);
+                jobName = "publishPost",
+                JobParam = data.savedFolder
+            },ct.Token);
 
-                var newlocation = await createNewFolder(data);
-
-                if (null == publishedLocation)
-                    publishedLocation = newlocation;
-            }
-            */
-
-            //await _storage.deleteFolderAsync(currentSavedFolder);
-
-            //return publishedLocation;
+            return statusFileName;
+            
         }
 
 
@@ -277,7 +265,7 @@ namespace components.folderCreator
             if (string.IsNullOrWhiteSpace(data.publishDetails.title))
                 data.publishDetails.title = data.description;
 
-            var jsonData = JsonConvert.SerializeObject(data);
+            var jsonData = JsonConvert.SerializeObject(data, Formatting.Indented);
             var statusFileName = $"{data.savedFolder}/sessionData.json";
 
             var stream = new System.IO.MemoryStream(Encoding.UTF8.GetBytes(jsonData));

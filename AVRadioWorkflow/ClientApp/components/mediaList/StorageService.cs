@@ -20,7 +20,7 @@ using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Processing;
 using SixLabors.ImageSharp.Formats;
 using NAudio.Wave;
-using CustomExtensions;
+
 using Newtonsoft.Json;
 
 namespace components.mediaList

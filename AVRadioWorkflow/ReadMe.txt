@@ -53,3 +53,17 @@ media, everything else
 in original put mp3, mp4, wav, aiff, mpeg
 
 media: everything else
+
+//NEShecdular : actionserver
+check out AVRadioWorkflow\actionServer\docker-compose.yml
+We build the container with default cmd.
+Worn't work we
+
+WE need make sure container is always running
+
+while in dev env. do docker-compose build to maek sure the latest scripts are bult and available
+
+IN PRODUCTION
+deploy the action container by calling docker-compose up
+
+create the "publishPost" Job in Job schedules

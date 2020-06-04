@@ -8,7 +8,6 @@
         "baseUrl": "./src"
     },
     "include": [
-        "src/*.ts",
         "src/**/*.ts"
     ],
     "exclude": [

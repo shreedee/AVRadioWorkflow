@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "check": "node ./dist/test.js",
+    "check": "node ./dist/src/test.js",
     "prod": "node ",
     "debug": "ts-node-dev --inspect-brk=0.0.0.0:9222 ",
     "startandwait": "tail -f /dev/null"

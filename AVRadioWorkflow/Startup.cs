@@ -6,11 +6,13 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
-using Microsoft.AspNetCore.Mvc;
+
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
+using MassTransit;
+using MassTransit.RabbitMqTransport.Topology;
 
 namespace AVRadioWorkflow
 {
@@ -33,26 +35,49 @@ namespace AVRadioWorkflow
                 options.CheckConsentNeeded = context => true;
                 options.MinimumSameSitePolicy = SameSiteMode.None;
             });
-
-
             */
+
+            var mqConfig = Configuration.GetSection("rabbitMQ").Get<neSchedular.RabbitConfig>();
+            if(null == mqConfig)
+            {
+                throw new Exception("RabbitMQ not configured");
+            }
+
+            services.AddMassTransit(x =>
+            {
+
+                x.AddBus(context => Bus.Factory.CreateUsingRabbitMq(cfg =>
+                {
+
+                    cfg.PublishTopology.BrokerTopologyOptions = PublishBrokerTopologyOptions.MaintainHierarchy;
+
+                    //will add healt checks later
+                    //https://masstransit-project.com/usage/configuration.html#asp-net-core
+                    // configure health checks for this bus instance
+                    //cfg.UseHealthCheck(context);
+
+                    cfg.Host(mqConfig.hostname, h => {
+                        h.Username(mqConfig.user);
+                        h.Password(mqConfig.pass);
+                    });
+                }));
+            });
+
+            EndpointConvention.Map<neSchedular.ExecuteJobTask>(
+                new Uri($"rabbitmq://{mqConfig.hostname}/{neSchedular.ExecuteJobTask.Q_NAME}"));
 
             services.AddTransient<components.mediaList.IStorageService, components.mediaList.StorageService>();
 
-            services.AddMvc().SetCompatibilityVersion(CompatibilityVersion.Version_2_1);
+            services.AddControllersWithViews().AddNewtonsoftJson();
+            services.AddRazorPages().AddNewtonsoftJson();
+
+
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
-        public void Configure(IApplicationBuilder app, IHostingEnvironment env, ILoggerFactory loggerFactory)
+        public void Configure(IApplicationBuilder app, IWebHostEnvironment env, ILoggerFactory loggerFactory)
         {
-            if (env.IsDevelopment())
-            {
-                app.UseDeveloperExceptionPage();
-            }
-            else
-            {
-                //app.UseExceptionHandler("/Home/Error");
-            }
+            
 
             app.UseExceptionHandler(
              builder =>
@@ -74,24 +99,18 @@ namespace AVRadioWorkflow
             app.UseStaticFiles();
             //app.UseCookiePolicy();
 
-            app.UseMvc(routes =>
+            app.UseRouting();
+
+            app.UseEndpoints(endpoints =>
             {
-                routes.MapRoute(
+                endpoints.MapControllerRoute(
                     name: "default",
-                    template: "{controller=Home}/{action=Index}/{id?}");
+                    pattern: "{controller=Home}/{action=Index}/{id?}");
+
+                endpoints.MapFallbackToController("Index", "Home");
             });
 
-            app.MapWhen(x => {
-                return !(x.Request.Path.Value.StartsWith("/api"));
-            }, builder =>
-            {
-                builder.UseMvc(routes =>
-                {
-                    routes.MapSpaFallbackRoute(
-                        name: "spa-fallback",
-                        defaults: new { controller = "Home", action = "Index" });
-                });
-            });
+            
         }
     }
 }

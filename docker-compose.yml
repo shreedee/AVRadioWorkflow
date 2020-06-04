@@ -16,8 +16,15 @@ services:
       MINIO_REGION: us-east-1
       MINIO_HTTP_TRACE: /logs.txt
     command: server /data
-    networks:
-      - backend   
+    
  
-networks:
-  backend:
+  rabbitmq:
+    image: rabbitmq:3.8.4-management
+    ports:
+      - 5672:5672
+      - 15672:15672
+    hostname: "rabbit1"
+    environment:
+      - RABBITMQ_DEFAULT_USER=revRabbit
+      - RABBITMQ_DEFAULT_PASS=jknjh12jhuyt
+

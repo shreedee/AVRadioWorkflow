@@ -14,9 +14,9 @@ services:
       - AVRADIO_AFTERPUB_FOLDER_0=/playground/done
       - AVRADIO_AFTERPUB_FOLDER_1=/archive
     volumes:
-      - ./scripts:/scripts/
+      - ./scripts/src:/scripts/src
       - ./privateData/.ssh/id_rsa:/root/.ssh/id_rsa_toCopy
-      - ../testdata/playground:/playground/
+      - C:\tmp\avWorkflowdata\playground\articles:/playground/
       - ../testdata/archive:/archive/
     ports:
       - 9222:9222
