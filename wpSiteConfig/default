@@ -1,0 +1,86 @@
+## Version 2021/01/03 - Changelog: https://github.com/linuxserver/docker-swag/commits/master/root/defaults/default
+
+error_page 502 /502.html;
+
+proxy_cache_path /cache levels=1:2 keys_zone=my_cache:10m max_size=10g 
+                 inactive=60m use_temp_path=off;
+
+
+# redirect all traffic to https
+server {
+	listen 80 default_server;
+	listen [::]:80 default_server;
+	server_name _;
+	return 301 https://$host$request_uri;
+}
+
+# main server block
+server {
+	listen 443 ssl http2 default_server;
+	listen [::]:443 ssl http2 default_server;
+
+	root /config/www;
+	index index.html index.htm index.php;
+
+	server_name _;
+
+	# all ssl related config moved to ssl.conf
+	include /config/nginx/ssl.conf;
+
+ # To allow special characters in headers
+ ignore_invalid_headers off;
+
+ # Allow any size file to be uploaded.
+ # Set to a value such as 1000m; to restrict file size to a specific value
+ client_max_body_size 0;
+
+
+ proxy_cache my_cache;
+
+
+# Deny access to uploads that aren’t images, videos, music, etc.
+  location ~* ^/wp-content/uploads/.*.(html|htm|shtml|php|swf)$ {
+    deny all;
+  }
+
+# Deny public access to wp-config.php
+location ~* wp-config.php {
+    deny all;
+}
+
+
+location ~ ^/wp-content/uploads/(.*) {
+    return 301 https://avradio.sgp1.digitaloceanspaces.com/wpcontent/uploads/$1;
+}
+
+
+location /radiodj {
+    proxy_http_version 1.1;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection $http_connection;
+    proxy_set_header Host $host;
+    proxy_cache_bypass $http_upgrade;
+    proxy_pass http://aurovilleradio.org:5001;
+
+}
+
+location / {
+
+   proxy_http_version 1.1;
+   proxy_buffering off;
+   proxy_ssl_session_reuse on; # enable this if you are internally connecting over SSL
+   proxy_request_buffering off; # Disable any internal request bufferring.
+   proxy_set_header Host $http_host;
+   proxy_pass http://wordpress:80;
+   proxy_set_header X-Real-IP $remote_addr;
+   proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+   proxy_set_header X-Forwarded-Proto https;
+ }
+
+
+}
+
+# enable subdomain method reverse proxy confs
+include /config/nginx/proxy-confs/*.subdomain.conf;
+# enable proxy cache for auth
+proxy_cache_path cache/ keys_zone=auth_cache:10m;

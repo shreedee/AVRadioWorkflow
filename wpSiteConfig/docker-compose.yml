@@ -1,0 +1,90 @@
+version: '2'
+
+services:
+  db: 
+    image: mysql:5.7
+    restart: unless-stopped
+    volumes:
+      - /wpapp/data/sql:/var/lib/mysql
+    environment:
+      MYSQL_DATABASE: aurovill_newrtv
+      MYSQL_USER: aurovill_newrtv
+      MYSQL_PASSWORD: Good.luck2013
+      MYSQL_ROOT_PASSWORD: HJnu,iijGf
+    networks:
+      - backend   
+
+  etcd0:
+    image: quay.io/coreos/etcd:v2.3.8
+    command:
+      - -name
+      - etcd0
+      - -advertise-client-urls
+      - http://etcd0:2379
+      - -listen-client-urls
+      - http://0.0.0.0:2379
+      - -initial-advertise-peer-urls
+      - http://etcd0:2380
+      - -listen-peer-urls
+      - http://0.0.0.0:2380
+      - -initial-cluster
+      - etcd0=http://etcd0:2380
+    networks:
+      - backend   
+
+  backup:
+    image: labizbille/mysql-backup:1.1
+    depends_on:
+      - db
+      - etcd0
+    environment:
+      DISCOVERYURL: http://etcd0:2379/v2/keys
+      S3_BUCKET: revlitedata
+      BACKUP_NAME: avrbang_wp_backup
+      S3_ACCESSID: AKIAIHW5IK2J5QUP4BLQ
+      S3_ACCESSKEY: IgYxd/jMQ28/OCRN6dhH0VdKNKuZf0RUt1IX48CH
+      MYSQL_HOST: db
+      MYSQL_USER: aurovill_newrtv
+      MYSQL_ROOT_PASSWORD: Good.luck2013
+      MYSQL_DB: aurovill_newrtv
+    networks:
+      - backend   
+
+  wordpress:
+    image: wordpress:5.3.2
+    restart: unless-stopped
+    depends_on:
+      - db
+    environment:
+      WORDPRESS_DB_HOST: db
+      WORDPRESS_DB_USER: aurovill_newrtv
+      WORDPRESS_DB_PASSWORD: Good.luck2013
+      WORDPRESS_DB_NAME: aurovill_newrtv
+    volumes:
+      - /wpapp/data/html:/var/www/html
+      - /wpapp/data/pmon:/pmon
+
+    networks:
+      - backend   
+
+  swag:
+    image: ghcr.io/linuxserver/swag
+    restart: unless-stopped
+    depends_on:
+      - wordpress
+    ports:
+      - 80:80
+      - 443:443
+    environment:
+      - TZ=Asia/Kolkata
+      - URL=aurovilleradio.org
+      - SUBDOMAINS=www,
+      - VALIDATION=http
+      - ONLY_SUBDOMAINS=true
+    volumes:
+      - ./proxyconfig:/config
+    networks:
+      - backend   
+
+networks:
+  backend:
