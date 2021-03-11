@@ -9,8 +9,8 @@ services:
     environment:
       MYSQL_DATABASE: aurovill_newrtv
       MYSQL_USER: aurovill_newrtv
-      MYSQL_PASSWORD: Good.luck2013
-      MYSQL_ROOT_PASSWORD: HJnu,iijGf
+      MYSQL_PASSWORD: 
+      MYSQL_ROOT_PASSWORD: 
     networks:
       - backend   
 
@@ -41,12 +41,12 @@ services:
       DISCOVERYURL: http://etcd0:2379/v2/keys
       S3_BUCKET: revlitedata
       BACKUP_NAME: avrbang_wp_backup
-      S3_ACCESSID: AKIAIHW5IK2J5QUP4BLQ
-      S3_ACCESSKEY: IgYxd/jMQ28/OCRN6dhH0VdKNKuZf0RUt1IX48CH
+      S3_ACCESSID: 
+      S3_ACCESSKEY: 
       MYSQL_HOST: db
-      MYSQL_USER: aurovill_newrtv
-      MYSQL_ROOT_PASSWORD: Good.luck2013
-      MYSQL_DB: aurovill_newrtv
+      MYSQL_USER: 
+      MYSQL_ROOT_PASSWORD: 
+      MYSQL_DB: 
     networks:
       - backend   
 
@@ -58,7 +58,7 @@ services:
     environment:
       WORDPRESS_DB_HOST: db
       WORDPRESS_DB_USER: aurovill_newrtv
-      WORDPRESS_DB_PASSWORD: Good.luck2013
+      WORDPRESS_DB_PASSWORD: 
       WORDPRESS_DB_NAME: aurovill_newrtv
     volumes:
       - /wpapp/data/html:/var/www/html
